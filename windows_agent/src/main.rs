@@ -13,12 +13,16 @@ struct Args {
     #[arg(short, long)]
     yes: bool,
 }
-
 fn main() -> anyhow::Result<()> {
     let args = Args::parse();
 
-    println!(include_str!("../disclaimer.md"));
+    // Macro shenanigans to get it to read disclaimer consistently
+    println!(include_str!(concat!(
+        env!("CARGO_MANIFEST_DIR"),
+        "/../DISCLAIMER.md"
+    )));
     println!("{}", "_".repeat(10));
+
     // confirms consent
     if !args.yes {
         println!("\nAre you sure [y/N]? ");
@@ -32,6 +36,7 @@ fn main() -> anyhow::Result<()> {
             process::exit(0);
         }
     }
+    println!("continuing...");
 
     Ok(())
 }
