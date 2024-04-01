@@ -17,11 +17,14 @@ fn main() -> anyhow::Result<()> {
     let args = Args::parse();
 
     // Macro shenanigans to get it to read disclaimer consistently
-    println!(include_str!(concat!(
-        env!("CARGO_MANIFEST_DIR"),
-        "/../DISCLAIMER.md"
-    )));
-    println!("{}", "_".repeat(10));
+    // Only runs in release
+    if !cfg!(debug_assertions) {
+        println!(include_str!(concat!(
+            env!("CARGO_MANIFEST_DIR"),
+            "/../DISCLAIMER.md"
+        )));
+        println!("{}", "_".repeat(10));
+    }
 
     // confirms consent
     if !args.yes {
@@ -31,12 +34,12 @@ fn main() -> anyhow::Result<()> {
         let stdin = io::stdin();
         stdin.read_line(&mut buffer)?;
 
-        if buffer.trim().to_lowercase() == "n" {
+        if !buffer.to_lowercase().contains('y') {
             println!("quiting...");
             process::exit(0);
         }
     }
     println!("continuing...");
 
-    Ok(())
+    hf_windows_client::run()
 }
