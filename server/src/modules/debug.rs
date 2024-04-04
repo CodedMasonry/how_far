@@ -1,38 +1,34 @@
-use std::{str::SplitWhitespace, thread, time::Duration};
-use async_trait::async_trait;
-use anyhow::Result;
 use crate::Command;
+use anyhow::Result;
+use async_trait::async_trait;
+use std::str::SplitWhitespace;
 
+/// Example math method
 pub struct TestCmd;
+/// Args & Flags Example
 pub struct TestArgs;
+/// Prints help messages
+pub struct Help;
 
 pub fn add_commands() -> Vec<Box<dyn Command + Send + Sync>> {
-    vec![
-        Box::new(TestCmd),
-        Box::new(TestArgs),
-    ]
+    vec![Box::new(TestCmd), Box::new(TestArgs), Box::new(Help)]
 }
 
-/// Debug CLI
+pub async fn help_overview() -> String {
+    crate::format_help_section("Debug", add_commands()).await
+}
+
 #[async_trait]
 impl crate::Command for TestCmd {
     async fn run(&self, mut args: SplitWhitespace<'_>) -> Result<()> {
         let total: u32 = args.next().get_or_insert("100").parse()?;
-        let mut result = 1;
 
-        for i in 0..total {
-            result += i;
-            result = result / 3;
-
-            thread::sleep(Duration::from_millis(1))
-        }
-
-        println!("{}", result);
+        println!("{}", total);
         Ok(())
     }
 
-    fn help(&self) {
-        todo!()
+    fn description(&self) -> String {
+        "Example Command".to_string()
     }
 
     fn name(&self) -> String {
@@ -48,11 +44,27 @@ impl crate::Command for TestArgs {
         Ok(())
     }
 
-    fn help(&self) {
-        todo!()
+    fn description(&self) -> String {
+        "Test Arg Parsing".to_string()
     }
 
     fn name(&self) -> String {
         "test_args".to_string()
+    }
+}
+
+#[async_trait]
+impl crate::Command for Help {
+    async fn run(&self, _args: SplitWhitespace<'_>) -> Result<()> {
+        println!("{}", help_overview().await);
+        Ok(())
+    }
+
+    fn description(&self) -> String {
+        "Prints the help message".to_string()
+    }
+
+    fn name(&self) -> String {
+        "help".to_string()
     }
 }

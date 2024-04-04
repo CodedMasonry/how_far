@@ -41,10 +41,10 @@ pub async fn tui() -> anyhow::Result<()> {
                 }
             }
             Err(ReadlineError::Interrupted) => {
-                break;
+                eprintln!("[*] Please type 'exit' to leave");
             }
             Err(ReadlineError::Eof) => {
-                break;
+                eprintln!("[*] Please type 'exit' to leave");
             }
             Err(err) => {
                 println!("Error: {:?}", err);

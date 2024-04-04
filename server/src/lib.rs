@@ -19,6 +19,8 @@ use std::{
 use thiserror::Error;
 use tokio::sync::Mutex;
 
+const HELP_SPACING: usize = 20;
+
 /// Basic error handling for root module handling
 #[derive(Error, Debug)]
 pub enum ModuleError {
@@ -33,7 +35,7 @@ pub enum ModuleError {
 #[async_trait]
 pub trait Command: Send + Sync {
     async fn run(&self, args: SplitWhitespace<'_>) -> Result<()>;
-    fn help(&self);
+    fn description(&self) -> String;
     fn name(&self) -> String;
 }
 
@@ -168,4 +170,33 @@ async fn run_external_command(command: &str, args: SplitWhitespace<'_>) {
         Err(e) if e.kind() == ErrorKind::NotFound => println!("Command doesn't exist"),
         Err(e) => eprintln!("{:?}", e),
     };
+}
+
+async fn format_help_section(title: &str, commands: Vec<Box<dyn Command + Send + Sync>>) -> String {
+    let title = format!("{} {}", title, "Commands");
+    let descriptor_headers = average_spacing("Command", "Description", HELP_SPACING).await;
+    let descriptor_underlines = average_spacing("-------", "-----------", HELP_SPACING).await;
+
+    let mut result = format!(
+        "\n{}\n{}\n\n\t{}\n\t{}\n",
+        title,
+        "=".repeat(title.len()),
+        descriptor_headers,
+        descriptor_underlines
+    );
+    for cmd in commands {
+        let spaced_line = average_spacing(&cmd.name(), &cmd.description(), HELP_SPACING).await;
+        let line = format!("{}{}{}", "\t", spaced_line, "\n");
+
+        result.push_str(&line);
+    }
+
+    result
+}
+
+async fn average_spacing(str1: &str, str2: &str, spacing: usize) -> String {
+    let mut result = str1.to_string() + " ".repeat(spacing - str1.len()).as_str();
+
+    result.push_str(str2);
+    result
 }
