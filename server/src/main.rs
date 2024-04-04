@@ -1,13 +1,13 @@
-use std::io::{Read, Write};
-use std::net::{SocketAddr, TcpListener};
+use std::net::SocketAddr;
 use std::path::PathBuf;
 use std::sync::Arc;
 
 use clap::Parser;
-use how_far_server::get_cert;
-use log::debug;
-use tracing_subscriber::layer::SubscriberExt;
-use tracing_subscriber::util::SubscriberInitExt;
+use how_far_server::{get_cert, terminal};
+use log::{debug, error};
+use tokio::io::{self, copy, sink, AsyncWriteExt};
+use tokio::net::TcpListener;
+use tokio_rustls::TlsAcceptor;
 
 #[derive(Parser, Debug)]
 #[clap(name = "server")]
@@ -26,48 +26,61 @@ struct Opt {
 #[tokio::main]
 async fn main() {
     debug!("starting");
-    tracing_subscriber::registry()
-        .with(
-            tracing_subscriber::EnvFilter::try_from_default_env()
-                .unwrap_or_else(|_| "how_far_server=debug".into()),
-        )
-        .with(tracing_subscriber::fmt::layer().without_time())
-        .init();
+    env_logger::init();
 
     let opt = Opt::parse();
-    let code = {
-        if let Err(e) = run(opt).await {
-            eprintln!("ERROR: {e}");
-            1
-        } else {
-            0
-        }
-    };
 
-    std::process::exit(code);
+    // Server
+    tokio::spawn(async move {
+        if let Err(e) = run_listener(opt).await {
+            error!("ERROR: {e}");
+        }
+    });
+
+    terminal::tui().await.unwrap();
 }
-async fn run(options: Opt) -> anyhow::Result<()> {
-    debug!("generating certs");
+
+async fn run_listener(options: Opt) -> anyhow::Result<()> {
     let (certs, key) = get_cert()?;
     let config = rustls::ServerConfig::builder()
         .with_no_client_auth()
-        .with_single_cert(certs, key)?;
+        .with_single_cert(certs, key)
+        .map_err(|err| io::Error::new(io::ErrorKind::InvalidInput, err))?;
 
     debug!("Starting server");
 
-    let listener = TcpListener::bind(options.listen).unwrap();
+    let acceptor = TlsAcceptor::from(Arc::new(config));
+    let listener = TcpListener::bind(options.listen).await.unwrap();
     debug!("listening");
-    let (mut stream, _) = listener.accept()?;
-    debug!("conn. accepted");
 
-    let mut conn = rustls::ServerConnection::new(Arc::new(config))?;
-    conn.complete_io(&mut stream)?;
+    loop {
+        let (stream, peer_addr) = listener.accept().await?;
+        let acceptor = acceptor.clone();
 
-    conn.writer().write_all(b"Hello from the server")?;
-    conn.complete_io(&mut stream)?;
-    let mut buf = [0; 64];
-    let len = conn.reader().read(&mut buf)?;
-    println!("Received message from client: {:?}", &buf[..len]);
+        let fut = async move {
+            let mut stream = acceptor.accept(stream).await?;
 
-    Ok(())
+            let mut output = sink();
+            stream
+                .write_all(
+                    &b"HTTP/1.0 200 ok\r\n\
+                    Connection: close\r\n\
+                    Content-length: 12\r\n\
+                    \r\n\
+                    Hello world!"[..],
+                )
+                .await?;
+            stream.shutdown().await?;
+            copy(&mut stream, &mut output).await?;
+            println!("Hello: {}", peer_addr);
+
+            Ok(()) as io::Result<()>
+        };
+
+        tokio::spawn(async move {
+            if let Err(err) = fut.await {
+                error!("[*] Error with stream: {:?}", err);
+            }
+        });
+    }
 }

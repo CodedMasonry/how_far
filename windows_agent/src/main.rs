@@ -16,16 +16,6 @@ struct Args {
 fn main() -> anyhow::Result<()> {
     let args = Args::parse();
 
-    // Macro shenanigans to get it to read disclaimer consistently
-    // Only runs in release
-    if !cfg!(debug_assertions) {
-        println!(include_str!(concat!(
-            env!("CARGO_MANIFEST_DIR"),
-            "/../DISCLAIMER.md"
-        )));
-        println!("{}", "_".repeat(10));
-    }
-
     // confirms consent
     if !args.yes {
         println!("\nAre you sure [y/N]? ");

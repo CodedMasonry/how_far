@@ -5,14 +5,17 @@ edition = "2021"
 
 [dependencies]
 anyhow = "1.0.81"
+async-trait = "0.1.79"
 clap = { version = "4.5.4", features = ["derive"] }
 directories = "5.0.1"
+env_logger = "0.11.3"
 lazy_static = "1.4.0"
 log = "0.4.21"
 rcgen = "0.13.0"
-rustls = { version = "0.23.4", default-features = false, features = ["ring", "log", "logging", "tls12", "std"] }
+rustls = { version = "0.23.4", default-features = false, features = ["ring", "logging", "std"] }
 rustls-pemfile = "2.1.1"
 rustls-pki-types = "1.4.1"
+rustyline = "14.0.0"
+thiserror = "1.0.58"
 tokio = { version = "1.37.0", features = ["full"] }
-tracing-futures = "0.2.5"
-tracing-subscriber = { version = "0.3.18", features = ["env-filter"] }
+tokio-rustls = { version = "0.26.0", default-features = false, features = ["logging", "ring"] }
