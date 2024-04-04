@@ -43,7 +43,8 @@ impl crate::Command for TestCmd {
 #[async_trait]
 impl crate::Command for TestArgs {
     async fn run(&self, args: SplitWhitespace<'_>) -> Result<()> {
-        println!("{:#?}", crate::parse_flags(args).await);
+        let (args, flags) = crate::parse_flags(args).await;
+        println!("args: {:#?}\nFlags: {:#?}", args, flags);
         Ok(())
     }
 

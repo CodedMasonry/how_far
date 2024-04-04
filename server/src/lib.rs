@@ -111,12 +111,14 @@ pub async fn run_command(command: &str, args: SplitWhitespace<'_>) -> anyhow::Re
 }
 
 /// Handles parsing flags in a SplitWhitespace item
+/// default_args refers to args passed with no flags
 /// I know it isn't clean but it works
-async fn parse_flags(input: SplitWhitespace<'_>) -> HashMap<String, String> {
+async fn parse_flags(input: SplitWhitespace<'_>) -> (Vec<String>, HashMap<String, String>) {
     let mut flags_with_args = HashMap::new();
     let mut current_flag = String::new();
     let mut is_long_string = false;
     let mut long_string = Vec::new(); // In case someone has a long input ("my home/repos")
+    let mut args = Vec::new();
 
     for word in input {
         if word.starts_with('-') {
@@ -142,6 +144,10 @@ async fn parse_flags(input: SplitWhitespace<'_>) -> HashMap<String, String> {
                 flags_with_args.insert(current_flag.clone(), word.to_owned());
                 current_flag.clear();
             }
+        } else {
+            // Default argument handling
+            // Ex: test_args SOME_ARGUMENT
+            args.push(word.to_string());
         }
     }
 
@@ -149,7 +155,7 @@ async fn parse_flags(input: SplitWhitespace<'_>) -> HashMap<String, String> {
         flags_with_args.insert(current_flag.clone(), String::new());
     }
 
-    flags_with_args
+    (args, flags_with_args)
 }
 
 async fn run_external_command(command: &str, args: SplitWhitespace<'_>) {

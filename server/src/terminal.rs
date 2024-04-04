@@ -10,6 +10,7 @@ pub async fn tui() -> anyhow::Result<()> {
         let readline = rl.readline("how_far > ");
         match readline {
             Ok(input) => {
+                rl.add_history_entry(input.as_str())?;
                 let mut parts = input.trim().split_whitespace();
                 let command = parts.next().unwrap();
                 let args = parts;
