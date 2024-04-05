@@ -4,18 +4,21 @@ version = "0.1.0"
 edition = "2021"
 
 [dependencies]
-anyhow = "1.0.81"
-async-trait = "0.1.79"
-clap = { version = "4.5.4", features = ["derive"] }
-directories = "5.0.1"
-env_logger = "0.11.3"
-lazy_static = "1.4.0"
-log = "0.4.21"
-rcgen = "0.13.0"
-rustls = { version = "0.23.4", default-features = false, features = ["ring", "logging", "std"] }
-rustls-pemfile = "2.1.1"
-rustls-pki-types = "1.4.1"
-rustyline = "14.0.0"
-thiserror = "1.0.58"
-tokio = { version = "1.37.0", features = ["full"] }
-tokio-rustls = { version = "0.26.0", default-features = false, features = ["logging", "ring"] }
+anyhow = { workspace = true }
+async-trait = { workspace = true }
+clap = { workspace = true, features = ["derive"] }
+directories = { workspace = true }
+env_logger = { workspace = true }
+lazy_static = { workspace = true }
+log = { workspace = true }
+postcard = "1.0.8"
+rcgen = { workspace = true }
+redb = { version = "2.0.0", features = ["log", "logging"] }
+rustls = { workspace = true, features = ["ring", "logging", "std"] }
+rustls-pemfile = { workspace = true }
+rustls-pki-types = { workspace = true }
+rustyline = { workspace = true }
+thiserror = { workspace = true }
+tokio = { workspace = true, features = ["full"] }
+tokio-rustls = { workspace = true, features = ["logging", "ring"] }
+uuid = "1.8.0"

@@ -1,8 +1,7 @@
-use std::path::Path;
 use rustyline::{error::ReadlineError, DefaultEditor};
+use std::path::Path;
 
 use crate::{run_command, run_external_command};
-
 
 pub async fn tui() -> anyhow::Result<()> {
     let mut rl = DefaultEditor::new()?;
