@@ -39,6 +39,13 @@ pub trait Command: Send + Sync {
     fn name(&self) -> String;
 }
 
+/// A struct for storing help overview and fetching commmand lists
+#[async_trait]
+pub trait CommandSet: Send + Sync {
+    fn add_commands() -> Vec<Box<dyn Command + Send + Sync>>;
+    async fn help_overview() -> String;
+}
+
 lazy_static! {
     static ref CERTS: PathBuf = ProjectDirs::from("com", "codedmasonry", "how_far")
         .unwrap()
@@ -48,7 +55,7 @@ lazy_static! {
     static ref COMMANDS_SET: Arc<Mutex<Vec<Box<dyn Command + Send + Sync>>>> = {
         let mut temp_set: Vec<Box<dyn Command + Send + Sync>> = vec![];
 
-        temp_set.append(&mut modules::debug::add_commands());
+        temp_set.append(&mut modules::debug::DebugSet::add_commands());
 
         Arc::new(Mutex::new(temp_set))
     };

@@ -1,8 +1,10 @@
-use crate::Command;
+use crate::{Command, CommandSet};
 use anyhow::Result;
 use async_trait::async_trait;
 use std::str::SplitWhitespace;
 
+/// Debug Command Set
+pub struct DebugSet;
 /// Example math method
 pub struct TestCmd;
 /// Args & Flags Example
@@ -10,12 +12,15 @@ pub struct TestArgs;
 /// Prints help messages
 pub struct Help;
 
-pub fn add_commands() -> Vec<Box<dyn Command + Send + Sync>> {
-    vec![Box::new(TestCmd), Box::new(TestArgs), Box::new(Help)]
-}
+#[async_trait]
+impl crate::CommandSet for DebugSet {
+    fn add_commands() -> Vec<Box<dyn Command + Send + Sync>> {
+        vec![Box::new(TestCmd), Box::new(TestArgs), Box::new(Help)]
+    }
 
-pub async fn help_overview() -> String {
-    crate::format_help_section("Debug", add_commands()).await
+    async fn help_overview() -> String {
+        crate::format_help_section("Debug", Self::add_commands()).await
+    }
 }
 
 #[async_trait]
@@ -56,7 +61,7 @@ impl crate::Command for TestArgs {
 #[async_trait]
 impl crate::Command for Help {
     async fn run(&self, _args: SplitWhitespace<'_>) -> Result<()> {
-        println!("{}", help_overview().await);
+        println!("{}", DebugSet::help_overview().await);
         Ok(())
     }
 
