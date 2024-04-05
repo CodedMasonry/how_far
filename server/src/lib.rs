@@ -1,6 +1,8 @@
 #![feature(fs_try_exists)]
+pub mod database;
 pub mod modules;
 pub mod terminal;
+pub mod agents;
 
 use anyhow::Result;
 use async_trait::async_trait;
@@ -38,11 +40,9 @@ pub trait Command: Send + Sync {
 }
 
 lazy_static! {
-    static ref CERTS: PathBuf = ProjectDirs::from("com", "codedmasonry", "how_far")
-        .unwrap()
-        .data_local_dir()
-        .to_path_buf()
-        .join("certs");
+    pub static ref DATA_FOLDER: ProjectDirs =
+        directories::ProjectDirs::from("com", "codedmasonry", "how_far").unwrap();
+    static ref CERTS: PathBuf = DATA_FOLDER.data_local_dir().to_path_buf().join("certs");
     static ref COMMANDS_SET: Arc<Mutex<Vec<Box<dyn Command + Send + Sync>>>> = {
         let mut temp_set: Vec<Box<dyn Command + Send + Sync>> = vec![];
 
