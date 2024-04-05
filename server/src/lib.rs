@@ -1,8 +1,8 @@
 #![feature(fs_try_exists)]
-pub mod database;
-pub mod modules;
-pub mod terminal;
+#![allow(unused)]
 pub mod agents;
+pub mod database;
+pub mod terminal;
 
 use anyhow::Result;
 use async_trait::async_trait;
@@ -41,22 +41,15 @@ pub trait Command: Send + Sync {
     fn name(&self) -> String;
 }
 
-/// A struct for storing help overview and fetching commmand lists
-#[async_trait]
-pub trait CommandSet: Send + Sync {
-    fn add_commands() -> Vec<Box<dyn Command + Send + Sync>>;
-    async fn help_overview() -> String;
-}
-
 lazy_static! {
     pub static ref DATA_FOLDER: ProjectDirs =
         directories::ProjectDirs::from("com", "codedmasonry", "how_far").unwrap();
-    static ref CERTS: PathBuf = DATA_FOLDER.data_local_dir().to_path_buf().join("certs");
-    static ref COMMANDS_SET: Arc<Mutex<Vec<Box<dyn Command + Send + Sync>>>> = {
-        let mut temp_set: Vec<Box<dyn Command + Send + Sync>> = vec![];
+    pub static ref CERTS: PathBuf = DATA_FOLDER.data_local_dir().to_path_buf().join("certs");
+    //pub static ref AGENT_DB: AgentDataBase<'static> = AgentDataBase::build().unwrap();
+    static ref COMMANDS_SET: Arc<Mutex<Vec<Box<dyn Command>>>> = {
+        let temp_set: Vec<Box<dyn Command>> = vec![];
 
-        temp_set.append(&mut modules::debug::DebugSet::add_commands());
-
+        //temp_set.append();
         Arc::new(Mutex::new(temp_set))
     };
 }
@@ -179,10 +172,10 @@ async fn run_external_command(command: &str, args: SplitWhitespace<'_>) {
     };
 }
 
-async fn format_help_section(title: &str, commands: Vec<Box<dyn Command + Send + Sync>>) -> String {
+fn format_help_section(title: &str, commands: Vec<Box<dyn Command + Send + Sync>>) -> String {
     let title = format!("{} {}", title, "Commands");
-    let descriptor_headers = average_spacing("Command", "Description", HELP_SPACING).await;
-    let descriptor_underlines = average_spacing("-------", "-----------", HELP_SPACING).await;
+    let descriptor_headers = average_spacing("Command", "Description", HELP_SPACING);
+    let descriptor_underlines = average_spacing("-------", "-----------", HELP_SPACING);
 
     let mut result = format!(
         "\n{}\n{}\n\n\t{}\n\t{}\n",
@@ -192,7 +185,7 @@ async fn format_help_section(title: &str, commands: Vec<Box<dyn Command + Send +
         descriptor_underlines
     );
     for cmd in commands {
-        let spaced_line = average_spacing(&cmd.name(), &cmd.description(), HELP_SPACING).await;
+        let spaced_line = average_spacing(&cmd.name(), &cmd.description(), HELP_SPACING);
         let line = format!("{}{}{}", "\t", spaced_line, "\n");
 
         result.push_str(&line);
@@ -201,7 +194,7 @@ async fn format_help_section(title: &str, commands: Vec<Box<dyn Command + Send +
     result
 }
 
-async fn average_spacing(str1: &str, str2: &str, spacing: usize) -> String {
+fn average_spacing(str1: &str, str2: &str, spacing: usize) -> String {
     let mut result = str1.to_string() + " ".repeat(spacing - str1.len()).as_str();
 
     result.push_str(str2);

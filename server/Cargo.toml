@@ -18,7 +18,7 @@ rustls = { workspace = true, features = ["ring", "logging", "std"] }
 rustls-pemfile = { workspace = true }
 rustls-pki-types = { workspace = true }
 rustyline = { workspace = true }
+serde = { version = "1.0.197", features = ["derive", "alloc"] }
 thiserror = { workspace = true }
 tokio = { workspace = true, features = ["full"] }
 tokio-rustls = { workspace = true, features = ["logging", "ring"] }
-uuid = "1.8.0"
