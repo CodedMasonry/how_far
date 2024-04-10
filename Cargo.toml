@@ -1,7 +1,7 @@
 [workspace]
 repository = "https://github.com/CodedMasonry/dynamic_signing"
 resolver = "2"
-members = ["windows_agent", "server"]
+members = ["windows_agent", "server", "how_far_types"]
 default-members = []
 
 [workspace.dependencies]
