@@ -2,6 +2,7 @@
 #![allow(unused)]
 pub mod agents;
 pub mod database;
+pub mod net;
 pub mod terminal;
 
 use anyhow::Result;
@@ -20,6 +21,7 @@ use std::{
 };
 use thiserror::Error;
 use tokio::sync::Mutex;
+use how_far_types::AgentInfo;
 
 const HELP_SPACING: usize = 20;
 
@@ -51,6 +53,10 @@ lazy_static! {
 
         //temp_set.append();
         Arc::new(Mutex::new(temp_set))
+    };
+
+    static ref CURRENT_AGENT: Arc<Mutex<Option<AgentInfo>>> =  {
+        Arc::new(Mutex::new(None))
     };
 }
 

@@ -1,15 +1,18 @@
 use std::path::PathBuf;
 
-use redb::{Database, Error, TableDefinition};
+use how_far_types::AgentInfo;
 use lazy_static::lazy_static;
+use redb::{Database, Error, TableDefinition};
 
 /// Key: u32 and Value: Byte array (postcard serialized) of AgentInfo
 const TABLE: TableDefinition<u32, &[u8]> = TableDefinition::new("agents");
 
 lazy_static! {
-    static ref DB_FILE: PathBuf = crate::DATA_FOLDER.data_local_dir().to_path_buf().join("db.redb");
+    static ref DB_FILE: PathBuf = crate::DATA_FOLDER
+        .data_local_dir()
+        .to_path_buf()
+        .join("db.redb");
 }
-
 
 pub struct AgentDataBase<'a> {
     pub db: Database,
@@ -18,61 +21,24 @@ pub struct AgentDataBase<'a> {
 
 impl AgentDataBase<'_> {
     /// May fail if DB_FILE is corrupted or invalid
-    pub fn build() -> Result<Self, Error> {
+    pub fn build() -> Result<Self, redb::Error> {
         let db = Database::create(DB_FILE.as_path())?;
-        
-        Ok(AgentDataBase {
-            db,
-            table: TABLE,
-        })
+
+        Ok(AgentDataBase { db, table: TABLE })
     }
 }
 
-pub fn add_client() -> Result<(), Error> {
+pub fn fetch_agent(id: u32) -> anyhow::Result<Option<AgentInfo>> {
     let db = Database::create(DB_FILE.as_path())?;
-    let write_txn = db.begin_write()?;
-    {
-        let mut table = write_txn.open_table(TABLE)?;
-        table.insert(0, b"test".as_ref())?;
-    }
-    write_txn.commit()?;
 
     let read_txn = db.begin_read()?;
     let table = read_txn.open_table(TABLE)?;
-    assert_eq!(table.get(0)?.unwrap().value(), b"test");
 
-    Ok(())
-}
-
-
-pub fn remove_client() -> Result<(), Error> {
-    let db = Database::create(DB_FILE.as_path())?;
-    let write_txn = db.begin_write()?;
-    {
-        let mut table = write_txn.open_table(TABLE)?;
-        table.insert(0, b"test".as_ref())?;
-    }
-    write_txn.commit()?;
-
-    let read_txn = db.begin_read()?;
-    let table = read_txn.open_table(TABLE)?;
-    assert_eq!(table.get(0)?.unwrap().value(), b"test");
-
-    Ok(())
-}
-
-pub fn list_clients() -> Result<(), Error> {
-    let db = Database::create(DB_FILE.as_path())?;
-    let write_txn = db.begin_write()?;
-    {
-        let mut table = write_txn.open_table(TABLE)?;
-        table.insert(0, b"test".as_ref())?;
-    }
-    write_txn.commit()?;
-
-    let read_txn = db.begin_read()?;
-    let table = read_txn.open_table(TABLE)?;
-    assert_eq!(table.get(0)?.unwrap().value(), b"test");
-
-    Ok(())
+    match table.get(0)? {
+        Some(val) => {
+            let serialized: AgentInfo = postcard::from_bytes(val.value())?;
+            return Ok(Some(serialized));
+        }
+        None => return Ok(None),
+    };
 }

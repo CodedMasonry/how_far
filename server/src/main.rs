@@ -1,11 +1,10 @@
-use std::net::SocketAddr;
+use std::{io, net::SocketAddr};
 use std::path::PathBuf;
 use std::sync::Arc;
 
 use clap::Parser;
 use how_far_server::{get_cert, terminal};
 use log::{debug, error};
-use tokio::io::{self, copy, sink, AsyncWriteExt};
 use tokio::net::TcpListener;
 use tokio_rustls::TlsAcceptor;
 
@@ -57,28 +56,10 @@ async fn run_listener(options: Opt) -> anyhow::Result<()> {
         let (stream, peer_addr) = listener.accept().await?;
         let acceptor = acceptor.clone();
 
-        let fut = async move {
-            let mut stream = acceptor.accept(stream).await?;
-
-            let mut output = sink();
-            stream
-                .write_all(
-                    &b"HTTP/1.0 200 ok\r\n\
-                    Connection: close\r\n\
-                    Content-length: 12\r\n\
-                    \r\n\
-                    Hello world!"[..],
-                )
-                .await?;
-            stream.shutdown().await?;
-            copy(&mut stream, &mut output).await?;
-            println!("Hello: {}", peer_addr);
-
-            Ok(()) as io::Result<()>
-        };
+        let stream = acceptor.accept(stream).await?;
 
         tokio::spawn(async move {
-            if let Err(err) = fut.await {
+            if let Err(err) = how_far_server::net::handle_request(stream, peer_addr).await {
                 error!("[*] Error with stream: {:?}", err);
             }
         });
