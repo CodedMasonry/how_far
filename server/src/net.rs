@@ -1,4 +1,4 @@
-use std::{borrow::BorrowMut, net::SocketAddr};
+use std::{borrow::BorrowMut, collections::HashMap, net::SocketAddr};
 
 use httparse::Header;
 use thiserror::Error;
@@ -10,7 +10,7 @@ use tokio_rustls::server::TlsStream;
 
 use crate::database;
 
-#[derive(Clone, Debug)]
+#[derive(Clone, Debug, PartialEq)]
 pub enum RequestMethod {
     GET,
     POST,
@@ -27,13 +27,13 @@ pub enum NetError {
 pub struct RequestData<'a> {
     method: RequestMethod,
     path: String,
-    headers: Vec<Header<'a>>,
-    body: Option<&'a [u8]>,
+    headers: HashMap<&'a str, Vec<u8>>,
+    body: Option<Vec<u8>>,
 }
 
 pub async fn handle_request(
     mut stream: TlsStream<TcpStream>,
-    peer_addr: SocketAddr,
+    _peer_addr: SocketAddr,
 ) -> anyhow::Result<()> {
     // Reader becomes body after request is parsed out
     let mut reader = BufReader::new(stream.borrow_mut());
@@ -46,7 +46,15 @@ pub async fn handle_request(
         }
     }
 
-    let req = parse_request(&mut req.into_bytes()).await?;
+    let mut req = parse_request(req.as_bytes()).await?;
+    if req.method == RequestMethod::POST {
+        let content_length =
+            String::from_utf8(req.headers.get("content-length").unwrap().to_vec())?
+                .parse::<usize>()?;
+        let mut body = vec![0; content_length];
+        reader.read_exact(&mut body);
+        req.body = Some(body);
+    }
 
     stream
         .write_all(
@@ -62,7 +70,7 @@ pub async fn handle_request(
 
     stream.flush().await?;
     stream.shutdown().await?;
-    println!("Hello: {}", peer_addr);
+    println!("Request: {:#?}", req);
 
     Ok(())
 }
@@ -76,7 +84,7 @@ fn find_body_index(buffer: &[u8]) -> Option<usize> {
 
 /// Parses requests except body
 /// Body returned as None in all scenarios
-async fn parse_request(data: &mut [u8]) -> anyhow::Result<RequestData> {
+async fn parse_request(data: &[u8]) -> anyhow::Result<RequestData<'_>> {
     let mut headers = [httparse::EMPTY_HEADER; 8];
     let mut req = httparse::Request::new(&mut headers);
     let mut res = req.parse(data)?;
@@ -104,9 +112,14 @@ async fn parse_request(data: &mut [u8]) -> anyhow::Result<RequestData> {
         }
     };
 
+    let mut mapped_headers = HashMap::new();
+    for header in req.headers {
+        mapped_headers.insert(header.name, header.value.to_vec());
+    }
+
     Ok(RequestData {
         method,
-        headers: req.headers.to_vec(),
+        headers: mapped_headers,
         body: None,
         path,
     })
