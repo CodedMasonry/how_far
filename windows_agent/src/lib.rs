@@ -41,6 +41,8 @@ pub fn run() -> anyhow::Result<()> {
         .as_bytes(),
     )
     .unwrap();
+    tls.flush()?;
+
     let ciphersuite = tls.conn.negotiated_cipher_suite().unwrap();
     writeln!(
         &mut std::io::stderr(),
