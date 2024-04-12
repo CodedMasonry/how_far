@@ -19,7 +19,8 @@ rustls-pemfile = { workspace = true }
 rustls-pki-types = { workspace = true }
 rustyline = { workspace = true }
 serde = { version = "1.0.197", features = ["derive", "alloc"] }
-thiserror = { workspace = true }
+thiserror.workspace = true
 tokio = { workspace = true, features = ["full"] }
 tokio-rustls = { workspace = true, features = ["logging", "ring"] }
 how_far_types = { path = "../how_far_types" }
+httparse = "1.8.0"

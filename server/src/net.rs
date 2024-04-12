@@ -1,7 +1,9 @@
-use std::net::SocketAddr;
+use std::{borrow::BorrowMut, net::SocketAddr};
 
+use httparse::Header;
+use thiserror::Error;
 use tokio::{
-    io::{copy, sink, AsyncReadExt, AsyncWriteExt},
+    io::{copy, sink, AsyncBufReadExt, AsyncReadExt, AsyncWriteExt, BufReader},
     net::TcpStream,
 };
 use tokio_rustls::server::TlsStream;
@@ -9,15 +11,23 @@ use tokio_rustls::server::TlsStream;
 use crate::database;
 
 #[derive(Clone, Debug)]
-enum RequestMethod {
+pub enum RequestMethod {
     GET,
     POST,
+    PUT,
+}
+
+#[derive(Error, Debug)]
+pub enum NetError {
+    #[error("Invalid request structure, {0}")]
+    InvalidRequest(String),
 }
 
 #[derive(Clone, Debug)]
-struct RequestData<'a> {
+pub struct RequestData<'a> {
     method: RequestMethod,
-    headers: Vec<String>,
+    path: String,
+    headers: Vec<Header<'a>>,
     body: Option<&'a [u8]>,
 }
 
@@ -25,8 +35,18 @@ pub async fn handle_request(
     mut stream: TlsStream<TcpStream>,
     peer_addr: SocketAddr,
 ) -> anyhow::Result<()> {
-    let mut request = [0; 4096];
-    stream.read(&mut request).await?;
+    // Reader becomes body after request is parsed out
+    let mut reader = BufReader::new(stream.borrow_mut());
+    let mut req = String::new();
+    loop {
+        let r = reader.read_line(&mut req).await?;
+        // If there are less than 3 chars in line
+        if r < 3 {
+            break;
+        }
+    }
+
+    let req = parse_request(&mut req.into_bytes()).await?;
 
     stream
         .write_all(
@@ -47,63 +67,50 @@ pub async fn handle_request(
     Ok(())
 }
 
+fn find_body_index(buffer: &[u8]) -> Option<usize> {
+    buffer
+        .windows(4)
+        .position(|w| matches!(w, b"\r\n\r\n"))
+        .map(|ix| ix + 4)
+}
+
+/// Parses requests except body
+/// Body returned as None in all scenarios
 async fn parse_request(data: &mut [u8]) -> anyhow::Result<RequestData> {
-    let header: Vec<&[u8]> = data.split(|byte| byte == &b'\n').collect::<Vec<&[u8]>>();
+    let mut headers = [httparse::EMPTY_HEADER; 8];
+    let mut req = httparse::Request::new(&mut headers);
+    let mut res = req.parse(data)?;
+
+    let method = match req.method {
+        Some(v) => {
+            if v == "GET" {
+                RequestMethod::GET
+            } else if v == "POST" {
+                RequestMethod::POST
+            } else {
+                // Temporary catch-all
+                RequestMethod::PUT
+            }
+        }
+        None => {
+            return Err(NetError::InvalidRequest("No Method Specified".to_string()).into());
+        }
+    };
+
+    let path = match req.path {
+        Some(v) => v.to_string(),
+        None => {
+            return Err(NetError::InvalidRequest("No Path Specified".to_string()).into());
+        }
+    };
 
     Ok(RequestData {
-        method: RequestMethod::GET,
-        headers: Vec::new(),
+        method,
+        headers: req.headers.to_vec(),
         body: None,
+        path,
     })
 }
-
-/*
-async fn process_request(
-    printer: &Option<String>,
-    settings: Arc<Settings>,
-    recv: RecvStream,
-) -> Result<Vec<u8>> {
-    let mut reader = BufReader::new(recv);
-    let mut name = String::new();
-    loop {
-        let r = reader.read_line(&mut name).await.unwrap();
-        if r < 3 {
-            break;
-        }
-    }
-
-    let mut extension = String::new();
-    let mut session_id = String::new();
-    let mut request_context = String::new();
-    let linesplit = name.split("\n");
-    // Parse some headers
-    for l in linesplit {
-        if l.starts_with("Extension") {
-            // Extension Header
-            let sizeplit = l.split(":");
-            for s in sizeplit {
-                if !(s.starts_with("Extension")) {
-                    extension = s.trim().parse::<String>().unwrap();
-                }
-            }
-        } else if l.starts_with("Session") {
-            // Session Header
-            let sizeplit = l.split(":");
-            for s in sizeplit {
-                if !(s.starts_with("Session")) {
-                    session_id = s.trim().parse::<String>().unwrap();
-                }
-            }
-        } else if l.starts_with("POST") {
-            // if POST
-            request_context = String::from("print")
-        } else if l.starts_with("GET") && l.contains("auth") {
-            // if AUTH
-            request_context = String::from("auth")
-        }
-    }
-}
-*/
 
 async fn handle_queue(stream: &mut TlsStream<TcpStream>) -> anyhow::Result<String> {
     let agent = database::fetch_agent(0)?;
