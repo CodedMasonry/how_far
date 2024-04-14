@@ -25,7 +25,7 @@ struct Opt {
 #[tokio::main]
 async fn main() {
     debug!("starting");
-    env_logger::init();
+    tracing_subscriber::fmt::fmt().init();
 
     let opt = Opt::parse();
 
@@ -60,7 +60,7 @@ async fn run_listener(options: Opt) -> anyhow::Result<()> {
 
         tokio::spawn(async move {
             if let Err(err) = how_far_server::net::handle_request(stream, peer_addr).await {
-                error!("[*] Error with stream: {:?}", err);
+                error!("Error with stream: {:?}", err);
             }
         });
     }

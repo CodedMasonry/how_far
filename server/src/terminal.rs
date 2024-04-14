@@ -1,3 +1,4 @@
+use log::{error, warn};
 use rustyline::{error::ReadlineError, DefaultEditor};
 use std::path::Path;
 
@@ -19,7 +20,7 @@ pub async fn tui() -> anyhow::Result<()> {
                         let new_dir = args.peekable().peek().map_or("/", |x| *x);
                         let root = Path::new(new_dir);
                         if let Err(e) = std::env::set_current_dir(&root) {
-                            eprintln!("{}", e);
+                            error!("{}", e);
                         }
                     }
 
@@ -33,20 +34,20 @@ pub async fn tui() -> anyhow::Result<()> {
                             if e.is::<crate::ModuleError>() {
                                 run_external_command(command, args).await;
                             } else {
-                                eprintln!("Error running command: {:#?}", e);
+                                error!("Error running command: {:#?}", e);
                             }
                         }
                     },
                 }
             }
             Err(ReadlineError::Interrupted) => {
-                eprintln!("[*] Please type 'exit' to leave");
+                warn!("Please type 'exit' to leave");
             }
             Err(ReadlineError::Eof) => {
-                eprintln!("[*] Please type 'exit' to leave");
+                warn!("Please type 'exit' to leave");
             }
             Err(err) => {
-                println!("Error: {:?}", err);
+                error!("Error: {:?}", err);
                 break;
             }
         }

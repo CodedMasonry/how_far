@@ -8,7 +8,6 @@ default-members = []
 anyhow = "1.0.81"
 clap = "4.5.4"
 directories = "5.0.1"
-env_logger = "0.11.3"
 goldberg = "0.1.0"
 log = "0.4.21"
 rcgen = "0.13.0"

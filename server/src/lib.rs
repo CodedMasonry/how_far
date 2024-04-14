@@ -10,7 +10,7 @@ use anyhow::Result;
 use async_trait::async_trait;
 use directories::ProjectDirs;
 use how_far_types::AgentInfo;
-use log::debug;
+use log::{debug, error, info};
 use rcgen::{date_time_ymd, CertificateParams, DistinguishedName, DnType, KeyPair, SanType};
 use std::sync::LazyLock;
 use std::{
@@ -169,8 +169,8 @@ async fn run_external_command(command: &str, args: SplitWhitespace<'_>) {
         Ok(mut child) => {
             child.wait().await.unwrap();
         }
-        Err(e) if e.kind() == ErrorKind::NotFound => println!("Command doesn't exist"),
-        Err(e) => eprintln!("{:?}", e),
+        Err(e) if e.kind() == ErrorKind::NotFound => info!("Command doesn't exist"),
+        Err(e) => error!("{:?}", e),
     };
 }
 

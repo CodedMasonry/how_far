@@ -1,6 +1,8 @@
 use std::{borrow::BorrowMut, collections::HashMap, net::SocketAddr};
 
+use crate::database;
 use httparse::Header;
+use log::info;
 use rustls::crypto::hash::Hash;
 use thiserror::Error;
 use tokio::{
@@ -8,8 +10,6 @@ use tokio::{
     net::TcpStream,
 };
 use tokio_rustls::server::TlsStream;
-
-use crate::database;
 
 #[derive(Clone, Debug, PartialEq)]
 pub enum RequestMethod {
@@ -71,7 +71,7 @@ pub async fn handle_request(
 
     stream.flush().await?;
     stream.shutdown().await?;
-    println!("Request: {}", peer_addr);
+    info!("Request: {}", peer_addr);
 
     Ok(())
 }
