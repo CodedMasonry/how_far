@@ -1,4 +1,5 @@
 #![feature(fs_try_exists)]
+#![feature(lazy_cell)]
 #![allow(unused)]
 pub mod agents;
 pub mod database;
@@ -8,9 +9,10 @@ pub mod terminal;
 use anyhow::Result;
 use async_trait::async_trait;
 use directories::ProjectDirs;
-use lazy_static::lazy_static;
+use how_far_types::AgentInfo;
 use log::debug;
 use rcgen::{date_time_ymd, CertificateParams, DistinguishedName, DnType, KeyPair, SanType};
+use std::sync::LazyLock;
 use std::{
     collections::HashMap,
     fs::{self, File},
@@ -21,9 +23,21 @@ use std::{
 };
 use thiserror::Error;
 use tokio::sync::Mutex;
-use how_far_types::AgentInfo;
 
 const HELP_SPACING: usize = 20;
+
+pub static DATA_FOLDER: LazyLock<ProjectDirs> =
+    LazyLock::new(|| directories::ProjectDirs::from("com", "codedmasonry", "how_far").unwrap());
+pub static CERTS: LazyLock<PathBuf> =
+    LazyLock::new(|| DATA_FOLDER.data_local_dir().to_path_buf().join("certs"));
+static COMMANDS_SET: LazyLock<Vec<Box<dyn Command>>> = LazyLock::new(|| {
+    let temp_set: Vec<Box<dyn Command>> = vec![];
+
+    //temp_set.append();
+    temp_set
+});
+
+static CURRENT_AGENT: LazyLock<Mutex<Option<AgentInfo>>> = LazyLock::new(|| Mutex::new(None));
 
 /// Basic error handling for root module handling
 #[derive(Error, Debug)]
@@ -41,23 +55,6 @@ pub trait Command: Send + Sync {
     async fn run(&self, args: SplitWhitespace<'_>) -> Result<()>;
     fn description(&self) -> String;
     fn name(&self) -> String;
-}
-
-lazy_static! {
-    pub static ref DATA_FOLDER: ProjectDirs =
-        directories::ProjectDirs::from("com", "codedmasonry", "how_far").unwrap();
-    pub static ref CERTS: PathBuf = DATA_FOLDER.data_local_dir().to_path_buf().join("certs");
-    //pub static ref AGENT_DB: AgentDataBase<'static> = AgentDataBase::build().unwrap();
-    static ref COMMANDS_SET: Arc<Mutex<Vec<Box<dyn Command>>>> = {
-        let temp_set: Vec<Box<dyn Command>> = vec![];
-
-        //temp_set.append();
-        Arc::new(Mutex::new(temp_set))
-    };
-
-    static ref CURRENT_AGENT: Arc<Mutex<Option<AgentInfo>>> =  {
-        Arc::new(Mutex::new(None))
-    };
 }
 
 pub fn generate_cert() -> anyhow::Result<()> {
@@ -109,8 +106,7 @@ pub fn get_cert() -> anyhow::Result<(
 
 /// Intended for CLI; attempts to run cmd
 pub async fn run_command(command: &str, args: SplitWhitespace<'_>) -> anyhow::Result<()> {
-    let cmd_guard = COMMANDS_SET.lock();
-    if let Some(cmd) = cmd_guard.await.iter().find(|&cmd| cmd.name() == command) {
+    if let Some(cmd) = COMMANDS_SET.iter().find(|&cmd| cmd.name() == command) {
         return cmd.run(args).await;
     }
 

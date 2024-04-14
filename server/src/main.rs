@@ -1,6 +1,6 @@
-use std::{io, net::SocketAddr};
 use std::path::PathBuf;
 use std::sync::Arc;
+use std::{io, net::SocketAddr};
 
 use clap::Parser;
 use how_far_server::{get_cert, terminal};

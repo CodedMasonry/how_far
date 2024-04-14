@@ -5,22 +5,22 @@ edition = "2021"
 
 [dependencies]
 anyhow = { workspace = true }
-async-trait = { workspace = true }
 clap = { workspace = true, features = ["derive"] }
 directories = { workspace = true }
 env_logger = { workspace = true }
-lazy_static = { workspace = true }
 log = { workspace = true }
-postcard = "1.0.8"
+postcard = { workspace = true }
 rcgen = { workspace = true }
-redb = { version = "2.0.0", features = ["log", "logging"] }
+redb = { workspace = true, features = ["log", "logging"] }
 rustls = { workspace = true, features = ["ring", "logging", "std"] }
 rustls-pemfile = { workspace = true }
 rustls-pki-types = { workspace = true }
 rustyline = { workspace = true }
-serde = { version = "1.0.197", features = ["derive", "alloc"] }
+serde = { workspace = true, features = ["derive", "alloc"] }
 thiserror.workspace = true
 tokio = { workspace = true, features = ["full"] }
 tokio-rustls = { workspace = true, features = ["logging", "ring"] }
 how_far_types = { path = "../how_far_types" }
-httparse = "1.8.0"
+httparse = { workspace = true }
+sysinfo = { workspace = true }
+async-trait = { workspace = true }

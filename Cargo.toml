@@ -6,12 +6,10 @@ default-members = []
 
 [workspace.dependencies]
 anyhow = "1.0.81"
-async-trait = "0.1.79"
 clap = "4.5.4"
 directories = "5.0.1"
 env_logger = "0.11.3"
 goldberg = "0.1.0"
-lazy_static = "1.4.0"
 log = "0.4.21"
 rcgen = "0.13.0"
 rustls = { version = "0.23.4", default-features = false }
@@ -21,6 +19,12 @@ rustyline = "14.0.0"
 thiserror = "1.0.58"
 tokio = "1.37.0"
 tokio-rustls = { version = "0.26.0", default-features = false }
+httparse = "1.8.0"
+postcard = "1.0.8"
+redb = "2.0.0"
+serde = "1.0.197"
+sysinfo = "0.30.10"
+async-trait = "0.1.80"
 
 [profile.dev]
 debug = 0

@@ -1,18 +1,15 @@
 use std::path::PathBuf;
 
 use how_far_types::AgentInfo;
-use lazy_static::lazy_static;
 use redb::{Database, Error, TableDefinition};
+use std::sync::LazyLock;
 
 /// Key: u32 and Value: Byte array (postcard serialized) of AgentInfo
 const TABLE: TableDefinition<u32, &[u8]> = TableDefinition::new("agents");
-
-lazy_static! {
-    static ref DB_FILE: PathBuf = crate::DATA_FOLDER
-        .data_local_dir()
-        .to_path_buf()
-        .join("db.redb");
-}
+static DB_FILE: LazyLock<PathBuf> = LazyLock::new(|| crate::DATA_FOLDER
+    .data_local_dir()
+    .to_path_buf()
+    .join("db.redb"));
 
 pub struct AgentDataBase<'a> {
     pub db: Database,

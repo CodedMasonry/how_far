@@ -1,6 +1,7 @@
 use std::{borrow::BorrowMut, collections::HashMap, net::SocketAddr};
 
 use httparse::Header;
+use rustls::crypto::hash::Hash;
 use thiserror::Error;
 use tokio::{
     io::{copy, sink, AsyncBufReadExt, AsyncReadExt, AsyncWriteExt, BufReader},
@@ -26,14 +27,14 @@ pub enum NetError {
 #[derive(Clone, Debug)]
 pub struct RequestData<'a> {
     method: RequestMethod,
-    path: String,
-    headers: HashMap<&'a str, Vec<u8>>,
+    path: &'a str,
+    headers: HashMap<&'a str, &'a [u8]>,
     body: Option<Vec<u8>>,
 }
 
 pub async fn handle_request(
     mut stream: TlsStream<TcpStream>,
-    _peer_addr: SocketAddr,
+    peer_addr: SocketAddr,
 ) -> anyhow::Result<()> {
     // Reader becomes body after request is parsed out
     let mut reader = BufReader::new(stream.borrow_mut());
@@ -70,7 +71,7 @@ pub async fn handle_request(
 
     stream.flush().await?;
     stream.shutdown().await?;
-    println!("Request: {:#?}", req);
+    println!("Request: {}", peer_addr);
 
     Ok(())
 }
@@ -84,7 +85,7 @@ fn find_body_index(buffer: &[u8]) -> Option<usize> {
 
 /// Parses requests except body
 /// Body returned as None in all scenarios
-async fn parse_request(data: &[u8]) -> anyhow::Result<RequestData<'_>> {
+async fn parse_request(data: &[u8]) -> anyhow::Result<RequestData> {
     let mut headers = [httparse::EMPTY_HEADER; 8];
     let mut req = httparse::Request::new(&mut headers);
     let mut res = req.parse(data)?;
@@ -106,7 +107,7 @@ async fn parse_request(data: &[u8]) -> anyhow::Result<RequestData<'_>> {
     };
 
     let path = match req.path {
-        Some(v) => v.to_string(),
+        Some(v) => v,
         None => {
             return Err(NetError::InvalidRequest("No Path Specified".to_string()).into());
         }
@@ -114,7 +115,7 @@ async fn parse_request(data: &[u8]) -> anyhow::Result<RequestData<'_>> {
 
     let mut mapped_headers = HashMap::new();
     for header in req.headers {
-        mapped_headers.insert(header.name, header.value.to_vec());
+        mapped_headers.insert(header.name, header.value);
     }
 
     Ok(RequestData {
