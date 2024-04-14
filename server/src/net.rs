@@ -2,7 +2,7 @@ use std::{borrow::BorrowMut, collections::HashMap, net::SocketAddr};
 
 use crate::database;
 use httparse::Header;
-use log::info;
+use log::{debug, info};
 use rustls::crypto::hash::Hash;
 use thiserror::Error;
 use tokio::{
@@ -26,10 +26,10 @@ pub enum NetError {
 
 #[derive(Clone, Debug)]
 pub struct RequestData<'a> {
-    method: RequestMethod,
-    path: &'a str,
-    headers: HashMap<&'a str, &'a [u8]>,
-    body: Option<Vec<u8>>,
+    pub method: RequestMethod,
+    pub path: &'a str,
+    pub headers: HashMap<&'a str, &'a [u8]>,
+    pub body: Option<Vec<u8>>,
 }
 
 pub async fn handle_request(
@@ -60,7 +60,7 @@ pub async fn handle_request(
     stream
         .write_all(
             concat!(
-                "HTTP/1.0 200 ok\r\n",
+                "HTTP/2.0 200 ok\r\n",
                 "Content-Type: text/html;\r\n",
                 "Accept-Encoding: br\r\n",
                 "\r\n",
@@ -71,7 +71,7 @@ pub async fn handle_request(
 
     stream.flush().await?;
     stream.shutdown().await?;
-    info!("Request: {}", peer_addr);
+    debug!("{}: {:?}",peer_addr req);
 
     Ok(())
 }
@@ -126,7 +126,18 @@ async fn parse_request(data: &[u8]) -> anyhow::Result<RequestData> {
     })
 }
 
-async fn handle_queue(stream: &mut TlsStream<TcpStream>) -> anyhow::Result<String> {
-    let agent = database::fetch_agent(0)?;
+/// Attempts to get command queue for the request
+/// Returns Hex encoded JobData OR empty string 
+async fn fetch_queue(
+    request: &RequestData,
+    stream: &mut TlsStream<TcpStream>,
+) -> anyhow::Result<String> {
+    let id = match database::parse_agent_id(request).await? {
+        Some(v) => v,
+        None => return Ok(String::new()),
+    };
+
+
+
     return Ok(String::new());
 }

@@ -5,6 +5,7 @@ pub mod agents;
 pub mod database;
 pub mod net;
 pub mod terminal;
+pub mod hex;
 
 use anyhow::Result;
 use async_trait::async_trait;
