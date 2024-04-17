@@ -6,3 +6,4 @@ edition = "2021"
 [dependencies]
 postcard = { workspace = true, features = ["alloc"] }
 serde = { workspace = true, features = ["derive"] }
+chrono = { workspace = true, features = ["std", "now", "clock", "serde"] }

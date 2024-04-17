@@ -1,11 +1,9 @@
 #![feature(fs_try_exists)]
 #![feature(lazy_cell)]
-#![allow(unused)]
 pub mod agents;
 pub mod database;
 pub mod net;
 pub mod terminal;
-pub mod hex;
 
 use anyhow::Result;
 use async_trait::async_trait;
@@ -20,12 +18,11 @@ use std::{
     io::{BufReader, ErrorKind},
     path::PathBuf,
     str::SplitWhitespace,
-    sync::Arc,
 };
 use thiserror::Error;
 use tokio::sync::Mutex;
 
-const HELP_SPACING: usize = 20;
+//const HELP_SPACING: usize = 20;
 
 pub static DATA_FOLDER: LazyLock<ProjectDirs> =
     LazyLock::new(|| directories::ProjectDirs::from("com", "codedmasonry", "how_far").unwrap());
@@ -38,7 +35,7 @@ static COMMANDS_SET: LazyLock<Vec<Box<dyn Command>>> = LazyLock::new(|| {
     temp_set
 });
 
-static CURRENT_AGENT: LazyLock<Mutex<Option<AgentInfo>>> = LazyLock::new(|| Mutex::new(None));
+static _CURRENT_AGENT: LazyLock<Mutex<Option<AgentInfo>>> = LazyLock::new(|| Mutex::new(None));
 
 /// Basic error handling for root module handling
 #[derive(Error, Debug)]
@@ -118,7 +115,7 @@ pub async fn run_command(command: &str, args: SplitWhitespace<'_>) -> anyhow::Re
 /// Handles parsing flags in a SplitWhitespace item
 /// default_args refers to args passed with no flags
 /// I know it isn't clean but it works
-async fn parse_flags(input: SplitWhitespace<'_>) -> (Vec<String>, HashMap<String, String>) {
+async fn _parse_flags(input: SplitWhitespace<'_>) -> (Vec<String>, HashMap<String, String>) {
     let mut flags_with_args = HashMap::new();
     let mut current_flag = String::new();
     let mut is_long_string = false;
@@ -175,6 +172,7 @@ async fn run_external_command(command: &str, args: SplitWhitespace<'_>) {
     };
 }
 
+/*
 fn format_help_section(title: &str, commands: Vec<Box<dyn Command + Send + Sync>>) -> String {
     let title = format!("{} {}", title, "Commands");
     let descriptor_headers = average_spacing("Command", "Description", HELP_SPACING);
@@ -203,3 +201,4 @@ fn average_spacing(str1: &str, str2: &str, spacing: usize) -> String {
     result.push_str(str2);
     result
 }
+*/

@@ -1,4 +1,5 @@
 use serde::{Deserialize, Serialize};
+use chrono::Utc;
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub enum AgentJobType {
@@ -10,12 +11,26 @@ pub enum AgentJobType {
 
 #[derive(Clone, Debug, Serialize, Deserialize)]
 pub struct AgentInfo {
-    _id: u32,
-    _queue: Vec<AgentJob>,
+    pub last_check: Option<chrono::DateTime<Utc>>,
+    pub queue: Vec<AgentJob>,
 }
 
+/// Helpful wrapper for providing details only needed by the server
 #[derive(Clone, Debug, Serialize, Deserialize)]
 pub struct AgentJob {
-    request_type: AgentJobType,
-    args: Vec<String>,
+    pub issue_time: chrono::DateTime<Utc>,
+    pub job: AgentJobInner,
+}
+
+/// Inner value that is serialized and should be sent over the internet
+#[derive(Clone, Debug, Serialize, Deserialize)]
+pub struct AgentJobInner {
+    pub request_type: AgentJobType,
+    pub args: Vec<String>,
+}
+
+/// Type for sending array of AgentJobInner between server and client
+#[derive(Clone, Debug, Serialize, Deserialize)]
+pub struct NetJobList {
+    pub jobs: Vec<AgentJobInner>,
 }

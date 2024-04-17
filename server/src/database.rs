@@ -2,7 +2,7 @@ use std::{collections::HashMap, path::PathBuf};
 
 use crate::net::RequestData;
 use how_far_types::AgentInfo;
-use redb::{Database, Error, ReadableTable, TableDefinition};
+use redb::{Database, TableDefinition};
 use std::sync::LazyLock;
 use tokio::io::AsyncReadExt;
 
@@ -29,13 +29,13 @@ impl AgentDataBase<'_> {
     }
 }
 
-pub fn fetch_agent(id: u32) -> anyhow::Result<Option<AgentInfo>> {
+pub async fn fetch_agent(id: u32) -> anyhow::Result<Option<AgentInfo>> {
     let db = Database::create(DB_FILE.as_path())?;
 
-    let read_txn = db.begin_read()?;
-    let table = read_txn.open_table(TABLE)?;
+    let txn = db.begin_read()?;
+    let table = txn.open_table(TABLE)?;
 
-    match table.get(0)? {
+    match table.get(id)? {
         Some(val) => {
             let serialized: AgentInfo = postcard::from_bytes(val.value())?;
             return Ok(Some(serialized));
@@ -44,44 +44,57 @@ pub fn fetch_agent(id: u32) -> anyhow::Result<Option<AgentInfo>> {
     };
 }
 
-pub fn key_exists(id: u32) -> anyhow::Result<bool> {
+pub async fn update_agent(id: u32, info: &AgentInfo) -> anyhow::Result<()> {
+    let db = Database::create(DB_FILE.as_path())?;
+
+    let txn = db.begin_write()?;
+    let mut table = txn.open_table(TABLE)?;
+
+    let serialized = postcard::to_allocvec(info)?;
+
+    table.insert(id, &*serialized)?;
+    Ok(())
+}
+
+pub async fn key_exists(id: u32) -> anyhow::Result<bool> {
     let db = Database::create(DB_FILE.as_path())?;
 
     let read_txn = db.begin_read()?;
     let table = read_txn.open_table(TABLE)?;
 
-    match table.get(0)? {
-        Some(val) => return Ok(true),
+    match table.get(id)? {
+        Some(_) => return Ok(true),
         None => return Ok(false),
     };
 }
 
 /// Parse the request for agent Id
 /// Returns Ok(None) if agent doesn't exist
-pub async fn parse_agent_id(req: &RequestData) -> anyhow::Result<Option<String>> {
-    let cookies_head = match req.headers.get("Cookie") {
+pub async fn parse_agent_id(req: &mut RequestData<'_>) -> anyhow::Result<Option<u32>> {
+    let cookies_head = match req.headers.get_mut("Cookie") {
         Some(v) => v,
-        None => return Ok(false),
+        None => return Ok(None),
     };
 
-    let cookie_str = String::new();
+    let mut cookie_str = String::new();
     cookies_head.read_to_string(&mut cookie_str).await?;
     // explicit drop as quicker cleanup
-    drop(cookies_head);
 
-    let mapped_cookies = HashMap::new();
-    for cookie in cookie_str.split(';').map(|v| v.split('=')) {
+    let mut mapped_cookies = HashMap::new();
+    for mut cookie in cookie_str.split(';').map(|v| v.split('=')) {
         let k = cookie.next().unwrap();
         let v = cookie.next().unwrap();
         mapped_cookies.insert(k, v);
     }
-    drop(cookie_str);
 
-    let id = mapped_cookies
-        .get("__secure")
-        .unwrap_or_else(|| return Ok(false))
-        .parse::<u32>()?;
-    if key_exists(id) {
+    let id = mapped_cookies.get("__secure");
+    let id = match id {
+        Some(v) => v,
+        None => return Ok(None),
+    }
+    .parse::<u32>()?;
+
+    if key_exists(id).await? {
         return Ok(Some(id));
     } else {
         return Ok(None);

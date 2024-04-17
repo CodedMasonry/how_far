@@ -23,5 +23,5 @@ how_far_types = { path = "../how_far_types" }
 httparse = { workspace = true }
 sysinfo = { workspace = true }
 async-trait = { workspace = true }
-tracing = "0.1.40"
-tracing-subscriber = "0.3.18"
+chrono = { workspace = true, features = ["std", "now", "clock", "serde"] }
+env_logger = "0.11.3"

@@ -24,6 +24,7 @@ redb = "2.0.0"
 serde = "1.0.197"
 sysinfo = "0.30.10"
 async-trait = "0.1.80"
+chrono = { version = "0.4.38", default-features = false }
 
 [profile.dev]
 debug = 0

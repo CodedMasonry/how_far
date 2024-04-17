@@ -1,12 +1,12 @@
 use std::{borrow::BorrowMut, collections::HashMap, net::SocketAddr};
 
 use crate::database;
-use httparse::Header;
-use log::{debug, info};
-use rustls::crypto::hash::Hash;
+use how_far_types::NetJobList;
+use log::debug;
+use serde::Serialize;
 use thiserror::Error;
 use tokio::{
-    io::{copy, sink, AsyncBufReadExt, AsyncReadExt, AsyncWriteExt, BufReader},
+    io::{AsyncBufReadExt, AsyncReadExt, AsyncWriteExt, BufReader},
     net::TcpStream,
 };
 use tokio_rustls::server::TlsStream;
@@ -47,13 +47,14 @@ pub async fn handle_request(
         }
     }
 
+    // Handle Body parsing for POST requests
     let mut req = parse_request(req.as_bytes()).await?;
     if req.method == RequestMethod::POST {
         let content_length =
             String::from_utf8(req.headers.get("content-length").unwrap().to_vec())?
                 .parse::<usize>()?;
         let mut body = vec![0; content_length];
-        reader.read_exact(&mut body);
+        reader.read_exact(&mut body).await?;
         req.body = Some(body);
     }
 
@@ -61,8 +62,8 @@ pub async fn handle_request(
         .write_all(
             concat!(
                 "HTTP/2.0 200 ok\r\n",
-                "Content-Type: text/html;\r\n",
-                "Accept-Encoding: br\r\n",
+                "Content-Type: text/plain;\r\n",
+                "Accept-Encoding: gzip\r\n",
                 "\r\n",
             )
             .as_bytes(),
@@ -71,12 +72,12 @@ pub async fn handle_request(
 
     stream.flush().await?;
     stream.shutdown().await?;
-    debug!("{}: {:?}",peer_addr req);
+    debug!("{}: {:?}", peer_addr, req);
 
     Ok(())
 }
 
-fn find_body_index(buffer: &[u8]) -> Option<usize> {
+fn _find_body_index(buffer: &[u8]) -> Option<usize> {
     buffer
         .windows(4)
         .position(|w| matches!(w, b"\r\n\r\n"))
@@ -88,7 +89,7 @@ fn find_body_index(buffer: &[u8]) -> Option<usize> {
 async fn parse_request(data: &[u8]) -> anyhow::Result<RequestData> {
     let mut headers = [httparse::EMPTY_HEADER; 8];
     let mut req = httparse::Request::new(&mut headers);
-    let mut res = req.parse(data)?;
+    req.parse(data)?;
 
     let method = match req.method {
         Some(v) => {
@@ -127,17 +128,33 @@ async fn parse_request(data: &[u8]) -> anyhow::Result<RequestData> {
 }
 
 /// Attempts to get command queue for the request
-/// Returns Hex encoded JobData OR empty string 
-async fn fetch_queue(
-    request: &RequestData,
-    stream: &mut TlsStream<TcpStream>,
-) -> anyhow::Result<String> {
+/// Returns Hex encoded JobData OR empty string
+async fn _fetch_queue(request: &mut RequestData<'_>) -> anyhow::Result<Vec<u8>> {
     let id = match database::parse_agent_id(request).await? {
         Some(v) => v,
-        None => return Ok(String::new()),
+        None => return Ok(Vec::new()),
     };
 
+    let agent = match database::fetch_agent(id).await? {
+        Some(v) => v,
+        None => return Ok(Vec::new()),
+    };
 
+    let mut jobs = Vec::new();
+    for job in agent.queue {
+        match agent.last_check {
+            Some(last) => {
+                if job.issue_time > last {
+                    jobs.push(job.job);
+                }
+            }
+            None => jobs.push(job.job),
+        };
+    }
 
-    return Ok(String::new());
+    let serialized = postcard::to_allocvec(&NetJobList {
+        jobs,
+    })?;
+
+    return Ok(serialized);
 }

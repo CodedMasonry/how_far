@@ -24,10 +24,8 @@ struct Opt {
 
 #[tokio::main]
 async fn main() {
-    debug!("starting");
-    tracing_subscriber::fmt::fmt().init();
-
     let opt = Opt::parse();
+    env_logger::Builder::from_env(env_logger::Env::default().default_filter_or("info")).format_timestamp(None).init();
 
     // Server
     tokio::spawn(async move {
