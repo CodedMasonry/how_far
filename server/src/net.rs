@@ -3,7 +3,6 @@ use std::{borrow::BorrowMut, collections::HashMap, net::SocketAddr};
 use crate::database;
 use how_far_types::NetJobList;
 use log::debug;
-use serde::Serialize;
 use thiserror::Error;
 use tokio::{
     io::{AsyncBufReadExt, AsyncReadExt, AsyncWriteExt, BufReader},
