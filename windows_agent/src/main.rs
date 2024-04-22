@@ -31,5 +31,5 @@ fn main() -> anyhow::Result<()> {
     }
     println!("continuing...");
 
-    hf_windows_client::run()
+    hf_windows_client::updated_run()
 }

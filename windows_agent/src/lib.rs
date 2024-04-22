@@ -1,19 +1,39 @@
-use std::io::{stdout, Read, Write};
-use std::net::TcpStream;
+use std::io::Read;
 use std::sync::Arc;
 
-use rustls::crypto::{ring as provider, CryptoProvider};
+use how_far_types::NetJobList;
+use rustls::crypto::{aws_lc_rs as provider, CryptoProvider};
 use rustls::pki_types::CertificateDer;
 use rustls::RootCertStore;
 
-pub fn run() -> anyhow::Result<()> {
+pub fn updated_run() -> anyhow::Result<()> {
+    let agent = ureq::AgentBuilder::new()
+        .tls_config(Arc::new(fetch_config()))
+        .build();
+    let response = agent.get("https://localhost:8443/").call()?;
+
+    let mut body_bytes = Vec::with_capacity(
+        response
+            .header("content-length")
+            .unwrap()
+            .parse::<usize>()?,
+    );
+    response.into_reader().read_to_end(&mut body_bytes)?;
+
+    //let body: NetJobList = postcard::from_bytes(&body_bytes)?;
+
+    // println!("{:?}", body);
+    Ok(())
+}
+
+pub fn fetch_config() -> rustls::client::ClientConfig {
     // Handle importing root cert
     let trusted = include_bytes!(concat!(env!("OUT_DIR"), "/cert.der"));
     let mut roots = RootCertStore::empty();
-    roots.add(CertificateDer::from(trusted.to_vec()))?;
+    roots.add(CertificateDer::from(trusted.to_vec())).unwrap();
 
     // Handle rustls config
-    let config = rustls::ClientConfig::builder_with_provider(
+    rustls::client::ClientConfig::builder_with_provider(
         CryptoProvider {
             cipher_suites: vec![provider::cipher_suite::TLS13_CHACHA20_POLY1305_SHA256],
             kx_groups: vec![provider::kx_group::X25519],
@@ -24,37 +44,5 @@ pub fn run() -> anyhow::Result<()> {
     .with_protocol_versions(&[&rustls::version::TLS13])
     .unwrap()
     .with_root_certificates(roots)
-    .with_no_client_auth();
-
-    let server_name = "localhost".try_into().unwrap();
-    let mut conn = rustls::ClientConnection::new(Arc::new(config), server_name).unwrap();
-    let mut sock = TcpStream::connect("localhost:3000").unwrap();
-    let mut tls = rustls::Stream::new(&mut conn, &mut sock);
-    tls.write_all(
-        concat!(
-            "GET / HTTP/1.1\r\n",
-            "Host: www.rust-lang.org\r\n",
-            "Connection: close\r\n",
-            "Accept-Encoding: identity\r\n",
-            "\r\n"
-        )
-        .as_bytes(),
-    )
-    .unwrap();
-    tls.flush()?;
-
-    let ciphersuite = tls.conn.negotiated_cipher_suite().unwrap();
-    writeln!(
-        &mut std::io::stderr(),
-        "Current ciphersuite: {:?}",
-        ciphersuite.suite()
-    )
-    .unwrap();
-    let mut plaintext = Vec::new();
-    tls.read_to_end(&mut plaintext).unwrap();
-    stdout().write_all(&plaintext).unwrap();
-
-    tls.sock.shutdown(std::net::Shutdown::Both)?;
-
-    Ok(())
+    .with_no_client_auth()
 }

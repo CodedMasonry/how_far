@@ -57,17 +57,13 @@ pub async fn handle_request(
         req.body = Some(body);
     }
 
-    stream
-        .write_all(
-            concat!(
-                "HTTP/2.0 200 ok\r\n",
-                "Content-Type: text/plain;\r\n",
-                "Accept-Encoding: gzip\r\n",
-                "\r\n",
-            )
-            .as_bytes(),
-        )
-        .await?;
+    let return_content = match req.method {
+        RequestMethod::GET => get_handler(&mut req).await,
+        RequestMethod::POST => Vec::new(),
+        RequestMethod::PUT => Vec::new(),
+    };
+
+    stream.write_all(&return_content).await?;
 
     stream.flush().await?;
     stream.shutdown().await?;
@@ -76,7 +72,39 @@ pub async fn handle_request(
     Ok(())
 }
 
-fn _find_body_index(buffer: &[u8]) -> Option<usize> {
+/// [METHOD]_handlers are expected to handle all parsing errors and return them as proper errors in request.
+async fn get_handler<'a>(req: &mut RequestData<'_>) -> Vec<u8> {
+    if req.path == "/" {
+        let queue = match fetch_queue(req).await {
+            Ok(v) => v,
+            Err(_) => {
+                return concat!(
+                    "HTTP/2 500 ok",
+                    "Content-Type: text/plain;\r\n",
+                    "Accept-Encoding: gzip\r\n",
+                    "\r\n",
+                    "failed to fetch resources"
+                )
+                .as_bytes()
+                .to_vec()
+            }
+        };
+
+        let header = concat!(
+            "HTTP/2 200 ok\r\n",
+            "Content-Type: text/plain;\r\n",
+            "Accept-Encoding: gzip\r\n",
+            "\r\n",
+        )
+        .as_bytes();
+
+        [header, &queue].concat()
+    } else {
+        Vec::new()
+    }
+}
+
+async fn _find_body_index(buffer: &[u8]) -> Option<usize> {
     buffer
         .windows(4)
         .position(|w| matches!(w, b"\r\n\r\n"))
@@ -128,7 +156,7 @@ async fn parse_request(data: &[u8]) -> anyhow::Result<RequestData> {
 
 /// Attempts to get command queue for the request
 /// Returns Hex encoded JobData OR empty string
-async fn _fetch_queue(request: &mut RequestData<'_>) -> anyhow::Result<Vec<u8>> {
+async fn fetch_queue(request: &mut RequestData<'_>) -> anyhow::Result<Vec<u8>> {
     let id = match database::parse_agent_id(request).await? {
         Some(v) => v,
         None => return Ok(Vec::new()),
@@ -151,9 +179,7 @@ async fn _fetch_queue(request: &mut RequestData<'_>) -> anyhow::Result<Vec<u8>> 
         };
     }
 
-    let serialized = postcard::to_allocvec(&NetJobList {
-        jobs,
-    })?;
+    let serialized = postcard::to_allocvec(&NetJobList { jobs })?;
 
     return Ok(serialized);
 }

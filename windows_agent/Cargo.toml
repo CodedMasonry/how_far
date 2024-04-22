@@ -8,7 +8,10 @@ edition = "2021"
 anyhow = { workspace = true }
 clap = { workspace = true, features = ["derive"] }
 goldberg = { workspace = true }
-rustls = { workspace = true, features = ["ring", "tls12", "std", "log"] }
+rustls = { workspace = true, features = ["aws_lc_rs", "std", "logging"] }
+ureq = { workspace = true }
+how_far_types = { path = "../how_far_types" }
+postcard = { workspace = true, features = ["alloc"] }
 
 [build-dependencies]
 directories = { workspace = true }

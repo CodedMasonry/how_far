@@ -11,17 +11,19 @@ log = { workspace = true }
 postcard = { workspace = true }
 rcgen = { workspace = true }
 redb = { workspace = true, features = ["log", "logging"] }
-rustls = { workspace = true, features = ["ring", "logging", "std"] }
+rustls = { version = "0.23.5", default-features = false, features = ["aws_lc_rs", "std", "logging"]}
 rustls-pemfile = { workspace = true }
 rustls-pki-types = { workspace = true }
 rustyline = { workspace = true }
 serde = { workspace = true, features = ["derive", "alloc"] }
 thiserror.workspace = true
 tokio = { workspace = true, features = ["full"] }
-tokio-rustls = { workspace = true, features = ["logging", "ring"] }
+tokio-rustls = { workspace = true, features = ["logging"] }
 how_far_types = { path = "../how_far_types" }
 httparse = { workspace = true }
 sysinfo = { workspace = true }
 async-trait = { workspace = true }
 chrono = { workspace = true, features = ["std", "now", "clock", "serde"] }
 env_logger = { workspace = true }
+axum = { workspace = true, features = ["http2"] }
+axum-server = { workspace = true, features = ["tls-rustls"] }

@@ -55,7 +55,8 @@ pub trait Command: Send + Sync {
     fn name(&self) -> String;
 }
 
-pub fn generate_cert() -> anyhow::Result<()> {
+pub async fn generate_cert() -> anyhow::Result<()> {
+    info!("Generating self-signed certificates");
     let mut params: CertificateParams = Default::default();
     params.not_before = date_time_ymd(1975, 1, 1);
     params.not_after = date_time_ymd(4096, 1, 1);
@@ -80,7 +81,7 @@ pub fn generate_cert() -> anyhow::Result<()> {
     Ok(())
 }
 
-pub fn get_cert() -> anyhow::Result<(
+pub async fn get_cert() -> anyhow::Result<(
     Vec<rustls_pki_types::CertificateDer<'static>>,
     rustls_pki_types::PrivateKeyDer<'static>,
 )> {
@@ -88,7 +89,7 @@ pub fn get_cert() -> anyhow::Result<(
     fs::create_dir_all(CERTS.as_os_str())?;
     if !fs::try_exists(CERTS.join("cert.pem"))? {
         debug!("Certs don't exist; generating...");
-        generate_cert()?;
+        generate_cert().await?;
     }
 
     let certs = rustls_pemfile::certs(&mut BufReader::new(&mut File::open(
