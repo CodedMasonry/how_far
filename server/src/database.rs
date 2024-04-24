@@ -1,10 +1,9 @@
 use std::{collections::HashMap, path::PathBuf};
 
-use crate::net::RequestData;
+use axum::http::HeaderMap;
 use how_far_types::AgentInfo;
 use redb::{Database, TableDefinition};
 use std::sync::LazyLock;
-use tokio::io::AsyncReadExt;
 
 /// Key: u32 and Value: Byte array (postcard serialized) of AgentInfo
 const TABLE: TableDefinition<u32, &[u8]> = TableDefinition::new("agents");
@@ -70,14 +69,13 @@ pub async fn key_exists(id: u32) -> anyhow::Result<bool> {
 
 /// Parse the request for agent Id
 /// Returns Ok(None) if agent doesn't exist
-pub async fn parse_agent_id(req: &mut RequestData<'_>) -> anyhow::Result<Option<u32>> {
-    let cookies_head = match req.headers.get_mut("Cookie") {
+pub async fn parse_agent_id(headers: &HeaderMap) -> anyhow::Result<Option<u32>> {
+    let cookies_head = match headers.get("Cookie") {
         Some(v) => v,
         None => return Ok(None),
     };
 
-    let mut cookie_str = String::new();
-    cookies_head.read_to_string(&mut cookie_str).await?;
+    let cookie_str = cookies_head.to_str()?;
     // explicit drop as quicker cleanup
 
     let mut mapped_cookies = HashMap::new();

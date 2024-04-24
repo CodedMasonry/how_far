@@ -18,7 +18,6 @@ rustyline = "14.0.0"
 thiserror = "1.0.58"
 tokio = "1.37.0"
 tokio-rustls = { version = "0.26.0", default-features = false }
-httparse = "1.8.0"
 postcard = "1.0.8"
 redb = "2.0.0"
 serde = "1.0.197"
@@ -28,7 +27,7 @@ chrono = { version = "0.4.38", default-features = false }
 env_logger = "0.11.3"
 axum = "0.7.5"
 axum-server = "0.6.0"
-ureq = { git = "https://github.com/algesten/ureq.git" }
+ureq = { git = "https://github.com/algesten/ureq.git", default-features = false }
 
 [profile.dev]
 debug = 0

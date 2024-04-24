@@ -1,7 +1,6 @@
 use std::io::Read;
 use std::sync::Arc;
 
-use how_far_types::NetJobList;
 use rustls::crypto::{aws_lc_rs as provider, CryptoProvider};
 use rustls::pki_types::CertificateDer;
 use rustls::RootCertStore;
@@ -12,6 +11,8 @@ pub fn updated_run() -> anyhow::Result<()> {
         .build();
     let response = agent.get("https://localhost:8443/").call()?;
 
+
+    println!("{:?}", response);
     let mut body_bytes = Vec::with_capacity(
         response
             .header("content-length")

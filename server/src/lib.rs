@@ -7,22 +7,21 @@ pub mod terminal;
 
 use anyhow::Result;
 use async_trait::async_trait;
+use axum::{
+    http::StatusCode,
+    response::{IntoResponse, Response},
+};
 use directories::ProjectDirs;
-use how_far_types::AgentInfo;
 use log::{debug, error, info};
 use rcgen::{date_time_ymd, CertificateParams, DistinguishedName, DnType, KeyPair, SanType};
 use std::sync::LazyLock;
 use std::{
-    collections::HashMap,
     fs::{self, File},
-    io::{BufReader, ErrorKind},
+    io::BufReader,
     path::PathBuf,
     str::SplitWhitespace,
 };
 use thiserror::Error;
-use tokio::sync::Mutex;
-
-//const HELP_SPACING: usize = 20;
 
 pub static DATA_FOLDER: LazyLock<ProjectDirs> =
     LazyLock::new(|| directories::ProjectDirs::from("com", "codedmasonry", "how_far").unwrap());
@@ -35,14 +34,15 @@ static COMMANDS_SET: LazyLock<Vec<Box<dyn Command>>> = LazyLock::new(|| {
     temp_set
 });
 
-static _CURRENT_AGENT: LazyLock<Mutex<Option<AgentInfo>>> = LazyLock::new(|| Mutex::new(None));
-
-/// Basic error handling for root module handling
+/// Basic error handling for root
 #[derive(Error, Debug)]
 pub enum ModuleError {
     #[error("Command Doesn't Exist")]
     NonExistant,
+
 }
+
+pub struct GenericError(anyhow::Error);
 
 /// Command is the default template for command modules
 /// Sub commands are EXPECTED to be handled by the run fn
@@ -53,6 +53,28 @@ pub trait Command: Send + Sync {
     async fn run(&self, args: SplitWhitespace<'_>) -> Result<()>;
     fn description(&self) -> String;
     fn name(&self) -> String;
+}
+
+/// Parsing generic errors into axum errors
+impl IntoResponse for GenericError {
+    fn into_response(self) -> Response {
+        (
+            StatusCode::INTERNAL_SERVER_ERROR,
+            format!("Something went wrong: {}", self.0),
+        )
+            .into_response()
+    }
+}
+
+// This enables using `?` on functions that return `Result<_, anyhow::Error>` to turn them into
+// `Result<_, GenericError>` for axum returns
+impl<E> From<E> for GenericError
+where
+    E: Into<anyhow::Error>,
+{
+    fn from(err: E) -> Self {
+        Self(err.into())
+    }
 }
 
 pub async fn generate_cert() -> anyhow::Result<()> {
@@ -102,104 +124,3 @@ pub async fn get_cert() -> anyhow::Result<(
 
     Ok((certs, private_key))
 }
-
-/// Intended for CLI; attempts to run cmd
-pub async fn run_command(command: &str, args: SplitWhitespace<'_>) -> anyhow::Result<()> {
-    if let Some(cmd) = COMMANDS_SET.iter().find(|&cmd| cmd.name() == command) {
-        return cmd.run(args).await;
-    }
-
-    // Hits if no commands are it
-    return Err(ModuleError::NonExistant.into());
-}
-
-/// Handles parsing flags in a SplitWhitespace item
-/// default_args refers to args passed with no flags
-/// I know it isn't clean but it works
-async fn _parse_flags(input: SplitWhitespace<'_>) -> (Vec<String>, HashMap<String, String>) {
-    let mut flags_with_args = HashMap::new();
-    let mut current_flag = String::new();
-    let mut is_long_string = false;
-    let mut long_string = Vec::new(); // In case someone has a long input ("my home/repos")
-    let mut args = Vec::new();
-
-    for word in input {
-        if word.starts_with('-') {
-            if !current_flag.is_empty() {
-                flags_with_args.insert(current_flag.clone(), String::new());
-            }
-            current_flag = word.trim_start_matches('-').to_owned();
-        } else if !current_flag.is_empty() {
-            if word.starts_with("\"") {
-                long_string.push(word.trim_start_matches('\"'));
-                is_long_string = true
-            } else if word.ends_with("\"") {
-                long_string.push(word.trim_end_matches('\"'));
-
-                flags_with_args.insert(current_flag.clone(), long_string.join(" "));
-                long_string.clear();
-                current_flag.clear();
-
-                is_long_string = false;
-            } else if is_long_string == true {
-                long_string.push(word);
-            } else {
-                flags_with_args.insert(current_flag.clone(), word.to_owned());
-                current_flag.clear();
-            }
-        } else {
-            // Default argument handling
-            // Ex: test_args SOME_ARGUMENT
-            args.push(word.to_string());
-        }
-    }
-
-    if !current_flag.is_empty() {
-        flags_with_args.insert(current_flag.clone(), String::new());
-    }
-
-    (args, flags_with_args)
-}
-
-async fn run_external_command(command: &str, args: SplitWhitespace<'_>) {
-    let child = tokio::process::Command::new(command).args(args).spawn();
-
-    match child {
-        Ok(mut child) => {
-            child.wait().await.unwrap();
-        }
-        Err(e) if e.kind() == ErrorKind::NotFound => info!("Command doesn't exist"),
-        Err(e) => error!("{:?}", e),
-    };
-}
-
-/*
-fn format_help_section(title: &str, commands: Vec<Box<dyn Command + Send + Sync>>) -> String {
-    let title = format!("{} {}", title, "Commands");
-    let descriptor_headers = average_spacing("Command", "Description", HELP_SPACING);
-    let descriptor_underlines = average_spacing("-------", "-----------", HELP_SPACING);
-
-    let mut result = format!(
-        "\n{}\n{}\n\n\t{}\n\t{}\n",
-        title,
-        "=".repeat(title.len()),
-        descriptor_headers,
-        descriptor_underlines
-    );
-    for cmd in commands {
-        let spaced_line = average_spacing(&cmd.name(), &cmd.description(), HELP_SPACING);
-        let line = format!("{}{}{}", "\t", spaced_line, "\n");
-
-        result.push_str(&line);
-    }
-
-    result
-}
-
-fn average_spacing(str1: &str, str2: &str, spacing: usize) -> String {
-    let mut result = str1.to_string() + " ".repeat(spacing - str1.len()).as_str();
-
-    result.push_str(str2);
-    result
-}
-*/
