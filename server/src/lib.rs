@@ -1,6 +1,5 @@
 #![feature(fs_try_exists)]
 #![feature(lazy_cell)]
-pub mod agents;
 pub mod database;
 pub mod net;
 pub mod terminal;
@@ -34,7 +33,7 @@ static COMMANDS_SET: LazyLock<Vec<Box<dyn Command>>> = LazyLock::new(|| {
     temp_set
 });
 
-/// Basic error handling for root
+/// Error for terminal
 #[derive(Error, Debug)]
 pub enum ModuleError {
     #[error("Command Doesn't Exist")]
@@ -42,6 +41,18 @@ pub enum ModuleError {
 
 }
 
+/// Error for terminal
+#[derive(Error, Debug)]
+pub enum ServerError {
+    #[error("Database Error")]
+    DatabaseError(#[from] redb::Error),
+
+    #[error("Parsing Error")]
+    ParsingError(String),
+}
+
+
+/// Generic error casting for http returns
 pub struct GenericError(anyhow::Error);
 
 /// Command is the default template for command modules

@@ -1,9 +1,12 @@
 use std::{collections::HashMap, path::PathBuf};
 
-use axum::http::HeaderMap;
+use axum::http::{header, HeaderMap};
 use how_far_types::AgentInfo;
+use log::error;
 use redb::{Database, TableDefinition};
 use std::sync::LazyLock;
+use base64::prelude::*;
+
 
 /// Key: u32 and Value: Byte array (postcard serialized) of AgentInfo
 const TABLE: TableDefinition<u32, &[u8]> = TableDefinition::new("agents");
@@ -70,7 +73,7 @@ pub async fn key_exists(id: u32) -> anyhow::Result<bool> {
 /// Parse the request for agent Id
 /// Returns Ok(None) if agent doesn't exist
 pub async fn parse_agent_id(headers: &HeaderMap) -> anyhow::Result<Option<u32>> {
-    let cookies_head = match headers.get("Cookie") {
+    let cookies_head = match headers.get(header::COOKIE) {
         Some(v) => v,
         None => return Ok(None),
     };
@@ -80,21 +83,43 @@ pub async fn parse_agent_id(headers: &HeaderMap) -> anyhow::Result<Option<u32>> 
 
     let mut mapped_cookies = HashMap::new();
     for mut cookie in cookie_str.split(';').map(|v| v.split('=')) {
-        let k = cookie.next().unwrap();
-        let v = cookie.next().unwrap();
+        let k = cookie.next().unwrap_or_default();
+        let v = cookie.next().unwrap_or_default();
         mapped_cookies.insert(k, v);
     }
 
-    let id = mapped_cookies.get("__secure");
-    let id = match id {
+    let id = match mapped_cookies.get("__secure") {
         Some(v) => v,
         None => return Ok(None),
-    }
-    .parse::<u32>()?;
+    };
 
-    if key_exists(id).await? {
+    let id = deobfuscate_id(id).await?;
+
+    let exists = match key_exists(id).await {
+        Ok(v) => v,
+        Err(e) => {
+            error!("Error fetching database: {:?}", e);
+            return Ok(None);
+        }
+    };
+
+    if exists {
         return Ok(Some(id));
     } else {
         return Ok(None);
     }
+}
+
+
+const _U32_BYTES: u32 = u32::BITS / 4;
+pub async fn deobfuscate_id(str: &str) -> Result<u32, base64::DecodeError> {
+    let decoded = BASE64_STANDARD.decode(str)?;
+    Ok(as_u32_be(&decoded[0..4]))
+}
+
+fn as_u32_be(array: &[u8]) -> u32 {
+    ((array[0] as u32) << 24) +
+    ((array[1] as u32) << 16) +
+    ((array[2] as u32) <<  8) +
+    ((array[3] as u32) <<  0)
 }

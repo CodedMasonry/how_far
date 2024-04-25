@@ -28,3 +28,4 @@ axum = { workspace = true, features = ["http2"] }
 axum-server = { workspace = true, features = ["tls-rustls"] }
 tower-http = { version = "0.5.2", features = ["compression-br"] }
 tower = "0.4.13"
+base64 = "0.22.0"
