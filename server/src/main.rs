@@ -6,7 +6,12 @@ use how_far_server::{get_cert, terminal};
 use log::{debug, error, info};
 use tower::ServiceBuilder;
 
-use axum::{extract::ConnectInfo, http::HeaderMap, routing::get, Router};
+use axum::{
+    extract::ConnectInfo,
+    http::{HeaderMap, StatusCode},
+    routing::get,
+    Router,
+};
 use axum_server::tls_rustls::RustlsConfig;
 use tower_http::compression::CompressionLayer;
 
@@ -61,8 +66,22 @@ async fn run_listener(_options: Opt) -> anyhow::Result<()> {
     Ok(())
 }
 
-async fn root(ConnectInfo(addr): ConnectInfo<SocketAddr>, headers: HeaderMap) -> Result<Vec<u8>, how_far_server::GenericError> {
+async fn root(
+    ConnectInfo(addr): ConnectInfo<SocketAddr>,
+    headers: HeaderMap,
+) -> (StatusCode, Vec<u8>) {
     info!("{}: Connection Established", addr);
-    let result = how_far_server::net::fetch_queue(&headers).await?;
-    Ok(result)
+    let result = how_far_server::net::fetch_queue(&headers).await;
+
+    match result {
+        Ok(v) => return (StatusCode::OK, v),
+        Err(e) => {
+            error!("Error: {:?}", e);
+
+            return (
+                StatusCode::INTERNAL_SERVER_ERROR,
+                "something went wrong".into(),
+            );
+        }
+    }
 }

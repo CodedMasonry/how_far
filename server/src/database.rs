@@ -1,12 +1,12 @@
 use std::{collections::HashMap, path::PathBuf};
 
+use anyhow::anyhow;
 use axum::http::{header, HeaderMap};
+use base64::prelude::*;
 use how_far_types::AgentInfo;
-use log::error;
+use log::{debug, error};
 use redb::{Database, TableDefinition};
 use std::sync::LazyLock;
-use base64::prelude::*;
-
 
 /// Key: u32 and Value: Byte array (postcard serialized) of AgentInfo
 const TABLE: TableDefinition<u32, &[u8]> = TableDefinition::new("agents");
@@ -110,16 +110,22 @@ pub async fn parse_agent_id(headers: &HeaderMap) -> anyhow::Result<Option<u32>> 
     }
 }
 
+/// Junk Page offset set to 8 random bytes (Two u32 numbers)
+pub async fn deobfuscate_id(str: &str) -> Result<u32, anyhow::Error> {
+    let bytes: Vec<u8> = BASE64_STANDARD.decode(str)?;
+    if bytes.len() < 12 {
+        return Err(anyhow!("Invalid id size"));
+    }
 
-const _U32_BYTES: u32 = u32::BITS / 4;
-pub async fn deobfuscate_id(str: &str) -> Result<u32, base64::DecodeError> {
-    let decoded = BASE64_STANDARD.decode(str)?;
-    Ok(as_u32_be(&decoded[0..4]))
+    let decoded = as_u32_be(&bytes[8..12]);
+    debug!("id decoded: {}", decoded);
+
+    Ok(decoded)
 }
 
 fn as_u32_be(array: &[u8]) -> u32 {
-    ((array[0] as u32) << 24) +
-    ((array[1] as u32) << 16) +
-    ((array[2] as u32) <<  8) +
-    ((array[3] as u32) <<  0)
+    ((array[0] as u32) << 24)
+        + ((array[1] as u32) << 16)
+        + ((array[2] as u32) << 8)
+        + ((array[3] as u32) << 0)
 }
