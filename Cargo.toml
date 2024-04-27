@@ -14,7 +14,6 @@ rcgen = "0.13.0"
 rustls = { version = "0.23.5", default-features = false }
 rustls-pemfile = "2.1.1"
 rustls-pki-types = "1.4.1"
-rustyline = "14.0.0"
 thiserror = "1.0.58"
 tokio = "1.37.0"
 tokio-rustls = { version = "0.26.0", default-features = false }

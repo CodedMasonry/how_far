@@ -17,6 +17,7 @@ fn main() -> anyhow::Result<()> {
     let args = Args::parse();
     let id = include_bytes!(concat!(env!("OUT_DIR"), "/c_id"));
     let id: u32 = hf_windows_client::as_u32_be(id);
+    println!("{}", id);
 
     // confirms consent
     if !args.yes {

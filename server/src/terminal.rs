@@ -1,74 +1,49 @@
-use how_far_types::AgentInfo;
-use log::{error, info, warn};
-use rustyline::{error::ReadlineError, DefaultEditor};
-use tokio::sync::Mutex;
-use std::{path::Path, sync::LazyLock};
+mod app;
+mod event;
+mod handler;
+pub mod tui;
+mod ui;
+
+use ratatui::backend::CrosstermBackend;
+use ratatui::Terminal;
 use std::collections::HashMap;
+use std::io;
 use std::str::SplitWhitespace;
 
-use crate::{ModuleError, COMMANDS_SET};
+use self::{
+    app::{App, AppResult},
+    event::{Event, EventHandler},
+    handler::handle_key_events,
+    tui::Tui,
+};
 
-static _CURRENT_AGENT: LazyLock<Mutex<Option<AgentInfo>>> = LazyLock::new(|| Mutex::new(None));
+pub async fn tui() -> AppResult<()> {
+    // Create an application.
+    let mut app = App::new();
 
-pub async fn tui() -> anyhow::Result<()> {
-    let mut rl = DefaultEditor::new()?;
-    loop {
-        let readline = rl.readline("how_far > ");
-        match readline {
-            Ok(input) => {
-                rl.add_history_entry(input.as_str())?;
-                let mut parts = input.trim().split_whitespace();
-                let command = parts.next().unwrap();
-                let args = parts;
+    // Initialize the terminal user interface.
+    let backend = CrosstermBackend::new(io::stderr());
+    let terminal = Terminal::new(backend)?;
+    let events = EventHandler::new(250);
+    let mut tui = Tui::new(terminal, events);
+    tui.init()?;
 
-                match command {
-                    "cd" => {
-                        let new_dir = args.peekable().peek().map_or("/", |x| *x);
-                        let root = Path::new(new_dir);
-                        if let Err(e) = std::env::set_current_dir(&root) {
-                            error!("{}", e);
-                        }
-                    }
-
-                    "exit" => return Ok(()),
-
-                    // Attempts to run internal command; if internal command doesn't exist
-                    // then attempts to run external command
-                    command => match run_command(command, args.clone()).await {
-                        Ok(_) => continue,
-                        Err(e) => {
-                            if e.is::<crate::ModuleError>() {
-                                run_external_command(command, args).await;
-                            } else {
-                                error!("Error running command: {:#?}", e);
-                            }
-                        }
-                    },
-                }
-            }
-            Err(ReadlineError::Interrupted) => {
-                warn!("Please type 'exit' to leave");
-            }
-            Err(ReadlineError::Eof) => {
-                warn!("Please type 'exit' to leave");
-            }
-            Err(err) => {
-                error!("Error: {:?}", err);
-                break;
-            }
+    // Start the main loop.
+    while app.running {
+        // Render the user interface.
+        tui.draw(&mut app)?;
+        // Handle events.
+        match tui.events.next().await? {
+            Event::Tick => app.tick(),
+            Event::Key(key_event) => handle_key_events(key_event, &mut app)?,
+            Event::Mouse(_) => {}
+            Event::Resize(_, _) => {}
         }
     }
+
+    // Exit the user interface.
+    tui.exit()?;
     Ok(())
-}
-
-/// Intended for CLI; attempts to run cmd
-pub async fn run_command(command: &str, args: SplitWhitespace<'_>) -> anyhow::Result<()> {
-    if let Some(cmd) = COMMANDS_SET.iter().find(|&cmd| cmd.name() == command) {
-        return cmd.run(args).await;
-    }
-
-    // Hits if no commands are it
-    return Err(ModuleError::NonExistant.into());
 }
 
 /// Handles parsing flags in a SplitWhitespace item
@@ -117,16 +92,4 @@ async fn _parse_flags(input: SplitWhitespace<'_>) -> (Vec<String>, HashMap<Strin
     }
 
     (args, flags_with_args)
-}
-
-async fn run_external_command(command: &str, args: SplitWhitespace<'_>) {
-    let child = tokio::process::Command::new(command).args(args).spawn();
-
-    match child {
-        Ok(mut child) => {
-            child.wait().await.unwrap();
-        }
-        Err(e) if e.kind() == std::io::ErrorKind::NotFound => info!("Command doesn't exist"),
-        Err(e) => error!("{:?}", e),
-    };
 }

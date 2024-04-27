@@ -24,7 +24,7 @@ use how_far_types::DATA_FOLDER;
 
 pub static CERTS: LazyLock<PathBuf> =
     LazyLock::new(|| DATA_FOLDER.data_local_dir().to_path_buf().join("certs"));
-static COMMANDS_SET: LazyLock<Vec<Box<dyn Command>>> = LazyLock::new(|| {
+static _COMMANDS_SET: LazyLock<Vec<Box<dyn Command>>> = LazyLock::new(|| {
     let temp_set: Vec<Box<dyn Command>> = vec![];
 
     //temp_set.append();

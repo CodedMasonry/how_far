@@ -14,7 +14,6 @@ redb = { workspace = true, features = ["log", "logging"] }
 rustls = { version = "0.23.5", default-features = false, features = ["aws_lc_rs", "std", "logging"]}
 rustls-pemfile = { workspace = true }
 rustls-pki-types = { workspace = true }
-rustyline = { workspace = true }
 serde = { workspace = true, features = ["derive", "alloc"] }
 thiserror.workspace = true
 tokio = { workspace = true, features = ["full"] }
@@ -29,3 +28,6 @@ axum-server = { workspace = true, features = ["tls-rustls"] }
 tower-http = { version = "0.5.2", features = ["compression-br"] }
 tower = "0.4.13"
 base64 = "0.22.0"
+ratatui = "0.26.2"
+crossterm = { version = "0.27.0", features = ["event-stream"] }
+futures = "0.3.30"
