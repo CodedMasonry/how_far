@@ -91,7 +91,7 @@ impl EventHandler {
             .await
             .ok_or(Box::new(std::io::Error::new(
                 std::io::ErrorKind::Other,
-                "This is an IO error",
+                "IO error",
             )))
     }
 }

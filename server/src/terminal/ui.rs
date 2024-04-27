@@ -7,19 +7,16 @@ use ratatui::{
 
 use crate::terminal::app::App;
 
+
 /// Renders the user interface widgets.
-pub fn render(app: &mut App, frame: &mut Frame) {
-    // This is where you add new widgets.
-    // See the following resources:
-    // - https://docs.rs/ratatui/latest/ratatui/widgets/index.html
-    // - https://github.com/ratatui-org/ratatui/tree/master/examples
+pub fn render(_app: &mut App, frame: &mut Frame) {
+
     frame.render_widget(
         Paragraph::new(format!(
             "This is a tui template.\n\
                 Press `Esc`, `Ctrl-C` or `q` to stop running.\n\
                 Press left and right to increment and decrement the counter respectively.\n\
-                Counter: {}",
-            app.counter
+                Counting",
         ))
         .block(
             Block::bordered()

@@ -10,6 +10,7 @@ use axum::{
     http::StatusCode,
     response::{IntoResponse, Response},
 };
+use how_far_types::DATA_FOLDER;
 use log::{debug, error, info};
 use rcgen::{date_time_ymd, CertificateParams, DistinguishedName, DnType, KeyPair, SanType};
 use std::sync::LazyLock;
@@ -20,8 +21,8 @@ use std::{
     str::SplitWhitespace,
 };
 use thiserror::Error;
-use how_far_types::DATA_FOLDER;
 
+pub static LOG_FILE: LazyLock<String> = LazyLock::new(|| format!("{}.log", env!("CARGO_PKG_NAME")));
 pub static CERTS: LazyLock<PathBuf> =
     LazyLock::new(|| DATA_FOLDER.data_local_dir().to_path_buf().join("certs"));
 static _COMMANDS_SET: LazyLock<Vec<Box<dyn Command>>> = LazyLock::new(|| {
@@ -36,7 +37,6 @@ static _COMMANDS_SET: LazyLock<Vec<Box<dyn Command>>> = LazyLock::new(|| {
 pub enum ModuleError {
     #[error("Command Doesn't Exist")]
     NonExistant,
-
 }
 
 /// Error for terminal
@@ -48,7 +48,6 @@ pub enum ServerError {
     #[error("Parsing Error")]
     ParsingError(String),
 }
-
 
 /// Generic error casting for http returns
 pub struct GenericError(anyhow::Error);
