@@ -15,6 +15,8 @@ struct Args {
 }
 fn main() -> anyhow::Result<()> {
     let args = Args::parse();
+    let id = include_bytes!(concat!(env!("OUT_DIR"), "/c_id"));
+    let id: u32 = hf_windows_client::as_u32_be(id);
 
     // confirms consent
     if !args.yes {
@@ -31,5 +33,5 @@ fn main() -> anyhow::Result<()> {
     }
     println!("continuing...");
 
-    hf_windows_client::updated_run()
+    hf_windows_client::run()
 }

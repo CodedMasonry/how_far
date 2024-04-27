@@ -10,7 +10,6 @@ use axum::{
     http::StatusCode,
     response::{IntoResponse, Response},
 };
-use directories::ProjectDirs;
 use log::{debug, error, info};
 use rcgen::{date_time_ymd, CertificateParams, DistinguishedName, DnType, KeyPair, SanType};
 use std::sync::LazyLock;
@@ -21,9 +20,8 @@ use std::{
     str::SplitWhitespace,
 };
 use thiserror::Error;
+use how_far_types::DATA_FOLDER;
 
-pub static DATA_FOLDER: LazyLock<ProjectDirs> =
-    LazyLock::new(|| directories::ProjectDirs::from("com", "codedmasonry", "how_far").unwrap());
 pub static CERTS: LazyLock<PathBuf> =
     LazyLock::new(|| DATA_FOLDER.data_local_dir().to_path_buf().join("certs"));
 static COMMANDS_SET: LazyLock<Vec<Box<dyn Command>>> = LazyLock::new(|| {

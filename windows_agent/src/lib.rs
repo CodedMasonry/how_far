@@ -5,7 +5,7 @@ use rustls::crypto::{aws_lc_rs as provider, CryptoProvider};
 use rustls::pki_types::CertificateDer;
 use rustls::RootCertStore;
 
-pub fn updated_run() -> anyhow::Result<()> {
+pub fn run() -> anyhow::Result<()> {
     let agent = ureq::AgentBuilder::new()
         .tls_config(Arc::new(fetch_config()))
         .build();
@@ -46,4 +46,11 @@ pub fn fetch_config() -> rustls::client::ClientConfig {
     .unwrap()
     .with_root_certificates(roots)
     .with_no_client_auth()
+}
+
+pub fn as_u32_be(array: &[u8]) -> u32 {
+    ((array[0] as u32) << 24)
+        + ((array[1] as u32) << 16)
+        + ((array[2] as u32) << 8)
+        + ((array[3] as u32) << 0)
 }

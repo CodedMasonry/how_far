@@ -1,5 +1,22 @@
+#![feature(lazy_cell)]
+use std::{path::PathBuf, sync::LazyLock};
+
+use directories::ProjectDirs;
+use redb::TableDefinition;
 use serde::{Deserialize, Serialize};
 use chrono::Utc;
+
+pub static DATA_FOLDER: LazyLock<ProjectDirs> =
+    LazyLock::new(|| directories::ProjectDirs::from("com", "codedmasonry", "how_far").unwrap());
+
+/// Key: u32 and Value: Byte array (postcard serialized) of AgentInfo
+pub const DB_TABLE: TableDefinition<u32, &[u8]> = TableDefinition::new("agents");
+pub static DB_FILE: LazyLock<PathBuf> = LazyLock::new(|| {
+    crate::DATA_FOLDER
+        .data_local_dir()
+        .to_path_buf()
+        .join("db.redb")
+});
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub enum AgentJobType {

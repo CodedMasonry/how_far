@@ -7,3 +7,5 @@ edition = "2021"
 postcard = { workspace = true, features = ["alloc"] }
 serde = { workspace = true, features = ["derive"] }
 chrono = { workspace = true, features = ["std", "now", "clock", "serde"] }
+directories.workspace = true
+redb.workspace = true
