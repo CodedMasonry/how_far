@@ -1,5 +1,5 @@
-use std::net::SocketAddr;
 use std::path::PathBuf;
+use std::{net::SocketAddr, process};
 
 use clap::Parser;
 use how_far_server::{get_cert, terminal};
@@ -43,7 +43,13 @@ async fn main() {
         }
     });
 
-    terminal::tui().await.unwrap();
+    match terminal::tui().await {
+        Ok(_) => process::exit(0),
+        Err(e) => {
+            error!("{}", e);
+            process::exit(0)
+        }
+    };
 }
 
 async fn run_listener(_options: Opt) -> anyhow::Result<()> {
