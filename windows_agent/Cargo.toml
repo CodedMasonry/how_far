@@ -15,8 +15,8 @@ how_far_types = { path = "../how_far_types" }
 [build-dependencies]
 chrono.workspace = true
 directories = { workspace = true }
-getrandom = "0.2.14"
 how_far_types = { path = "../how_far_types" }
 postcard = { workspace = true, features = ["alloc"] }
+rand = "0.8.5"
 redb.workspace = true
 rustls-pemfile = { workspace = true }

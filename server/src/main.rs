@@ -2,8 +2,9 @@ use std::path::PathBuf;
 use std::{net::SocketAddr, process};
 
 use clap::Parser;
-use how_far_server::{get_cert, terminal};
+use how_far_server::{get_cert, terminal, TerminalLogger};
 use log::{debug, error, info};
+use reedline::ExternalPrinter;
 use tower::ServiceBuilder;
 
 use axum::{
@@ -32,9 +33,10 @@ struct Opt {
 #[tokio::main]
 async fn main() {
     let opt = Opt::parse();
-    env_logger::Builder::from_env(env_logger::Env::default().default_filter_or("info"))
-        .format_timestamp(None)
-        .init();
+    let printer = ExternalPrinter::new(20);
+    let logger = Box::new(TerminalLogger::new(printer.clone(), log::LevelFilter::Debug));
+    logger.init();
+    log::set_boxed_logger(logger).expect("Failed to set logger");
 
     // Server
     tokio::spawn(async move {
@@ -43,7 +45,7 @@ async fn main() {
         }
     });
 
-    match terminal::tui().await {
+    match terminal::tui(printer).await {
         Ok(_) => process::exit(0),
         Err(e) => {
             error!("{}", e);

@@ -7,7 +7,7 @@ edition = "2021"
 anyhow = { workspace = true }
 clap = { workspace = true, features = ["derive"] }
 directories = { workspace = true }
-log = { workspace = true }
+log = { workspace = true, features = ["std"] }
 postcard = { workspace = true }
 rcgen = { workspace = true }
 redb = { workspace = true, features = ["log", "logging"] }
@@ -27,6 +27,6 @@ axum-server = { workspace = true, features = ["tls-rustls"] }
 tower-http = { version = "0.5.2", features = ["compression-br"] }
 tower = "0.4.13"
 base64 = "0.22.0"
-env_logger = "0.11.3"
 reedline = { version = "0.31.0", features = ["external_printer"] }
 nu-ansi-term = "0.50.0"
+humantime = "2.1.0"

@@ -11,15 +11,18 @@ use axum::{
     response::{IntoResponse, Response},
 };
 use how_far_types::DATA_FOLDER;
-use log::{debug, error, info};
+use log::{debug, error, info, Level, LevelFilter};
+use nu_ansi_term::Color;
 use rcgen::{date_time_ymd, CertificateParams, DistinguishedName, DnType, KeyPair, SanType};
-use std::sync::LazyLock;
+use reedline::ExternalPrinter;
 use std::{
     fs::{self, File},
     io::BufReader,
     path::PathBuf,
     str::SplitWhitespace,
 };
+use std::{sync::LazyLock, time::SystemTime};
+
 use thiserror::Error;
 
 pub static LOG_FILE: LazyLock<String> = LazyLock::new(|| format!("{}.log", env!("CARGO_PKG_NAME")));
@@ -131,4 +134,60 @@ pub async fn get_cert() -> anyhow::Result<(
             .unwrap();
 
     Ok((certs, private_key))
+}
+
+pub struct TerminalLogger {
+    printer: ExternalPrinter<String>,
+    filter: LevelFilter,
+}
+
+impl TerminalLogger {
+    /// Creates a new Terminal Logger
+    pub fn new(printer: ExternalPrinter<String>, filter: LevelFilter) -> Self {
+        TerminalLogger { printer, filter }
+    }
+
+    /// Sets log max level
+    pub fn init(&self) {
+        log::set_max_level(self.filter);
+    }
+}
+
+impl log::Log for TerminalLogger {
+    fn enabled(&self, metadata: &log::Metadata) -> bool {
+        metadata.level() <= self.filter
+    }
+
+    fn log(&self, record: &log::Record) {
+        if self.enabled(record.metadata()) {
+            let time = humantime::format_rfc3339_seconds(SystemTime::now());
+            let msg = format!(
+                "{} {} {}: {}",
+                time,
+                color_level(record.level()),
+                format_target(record.target()),
+                record.args()
+            );
+
+            self.printer
+                .print(msg)
+                .expect("printing to terminal failed");
+        }
+    }
+
+    fn flush(&self) {}
+}
+
+fn color_level<'a>(level: Level) -> nu_ansi_term::AnsiGenericString<'a, str> {
+    match level {
+        Level::Error => Color::Red.paint("ERROR"),
+        Level::Warn => Color::Yellow.paint("WARN"),
+        Level::Info => Color::Green.paint("INFO"),
+        Level::Debug => Color::Blue.paint("DEBUG"),
+        Level::Trace => Color::Purple.paint("TRACE"),
+    }
+}
+
+fn format_target<'a>(target: &'a str) -> String {
+    target.replace("::", "/")
 }

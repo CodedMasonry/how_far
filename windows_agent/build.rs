@@ -7,15 +7,19 @@ use std::{
 
 use how_far_types::DB_TABLE;
 use how_far_types::{DATA_FOLDER, DB_FILE};
+use rand::Rng;
 use redb::Database;
 
 fn main() -> Result<(), Box<dyn std::error::Error>> {
     let out_dir = env::var_os("OUT_DIR").unwrap();
     save_server_cert()?;
 
-    let id = generate_id()?;
-    let id_file = Path::new(&out_dir).join("c_id");
-    fs::write(&id_file, id.to_string())?;
+    if cfg!(not(debug_assertions)) {
+        println!("cargo:rerun-if-changed=.");
+        let id = generate_id()?;
+        let id_file = Path::new(&out_dir).join("c_id");
+        fs::write(&id_file, id.to_string())?;
+    }
 
     Ok(())
 }
@@ -36,7 +40,9 @@ fn save_server_cert() -> Result<(), Box<dyn std::error::Error>> {
 }
 
 fn generate_id() -> Result<u32, Box<dyn std::error::Error>> {
-    let id: u32 = get_random_u32()?;
+    let mut rng = rand::thread_rng();
+    let id: u32 = rng.gen();
+
     let init_data: how_far_types::AgentInfo = how_far_types::AgentInfo {
         last_check: None,
         queue: Vec::new(),
@@ -51,18 +57,4 @@ fn generate_id() -> Result<u32, Box<dyn std::error::Error>> {
     table.insert(id, &*serialized)?;
 
     Ok(id)
-}
-
-fn get_random_u32() -> Result<u32, getrandom::Error> {
-    let mut buf = [0u8; 4];
-    getrandom::getrandom(&mut buf)?;
-
-    Ok(as_u32_be(&buf))
-}
-
-fn as_u32_be(array: &[u8]) -> u32 {
-    ((array[0] as u32) << 24)
-        + ((array[1] as u32) << 16)
-        + ((array[2] as u32) << 8)
-        + ((array[3] as u32) << 0)
 }
