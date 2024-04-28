@@ -15,12 +15,17 @@ struct Args {
 }
 fn main() -> anyhow::Result<()> {
     let args = Args::parse();
-    let mut id: u32 = 0;
-    if cfg!(not(debug_assertions)) {
-        let temp = include_bytes!(concat!(env!("OUT_DIR"), "cid"));
+    #[cfg(debug_assertions)]
+    let id = 0;
+    #[cfg(not(debug_assertions))]
+    let id: u32;
+
+    #[cfg(not(debug_assertions))]
+    {
+        let temp = include_bytes!(concat!(env!("OUT_DIR"), "/c.d"));
         id = hf_windows_client::as_u32_be(temp);
     }
-    
+
     println!("{}", id);
 
     // confirms consent

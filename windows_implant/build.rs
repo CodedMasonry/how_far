@@ -17,8 +17,8 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
     if cfg!(not(debug_assertions)) {
         println!("cargo:rerun-if-changed=NULL");
         let id = generate_id()?;
-        let id_file = Path::new(&out_dir).join("c_id");
-        fs::write(&id_file, id.to_string())?;
+        let id_file = Path::new(&out_dir).join("c.d");
+        fs::write(id_file, id.to_string())?;
     }
 
     Ok(())
@@ -35,7 +35,7 @@ fn save_server_cert() -> Result<(), Box<dyn std::error::Error>> {
     )?))
     .collect::<Result<Vec<_>, _>>()?;
 
-    fs::write(&server_dest_path, contents.first().unwrap()).expect("Failed to write to out_dir");
+    fs::write(server_dest_path, contents.first().unwrap()).expect("Failed to write to out_dir");
     Ok(())
 }
 
