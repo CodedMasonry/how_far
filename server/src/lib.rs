@@ -169,6 +169,6 @@ fn color_level<'a>(level: Level) -> nu_ansi_term::AnsiGenericString<'a, str> {
     }
 }
 
-fn format_target<'a>(target: &'a str) -> String {
+fn format_target(target: &str) -> String {
     target.replace("::", "/")
 }

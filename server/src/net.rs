@@ -31,5 +31,5 @@ pub async fn fetch_queue(request: &HeaderMap) -> anyhow::Result<Vec<u8>> {
 
     let serialized = postcard::to_allocvec(&NetJobList { jobs })?;
 
-    return Ok(serialized);
+    Ok(serialized)
 }

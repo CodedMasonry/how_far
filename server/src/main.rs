@@ -82,14 +82,14 @@ async fn root(
     let result = how_far_server::net::fetch_queue(&headers).await;
 
     match result {
-        Ok(v) => return (StatusCode::OK, v),
+        Ok(v) => (StatusCode::OK, v),
         Err(e) => {
             error!("Error: {:?}", e);
 
-            return (
+            (
                 StatusCode::INTERNAL_SERVER_ERROR,
                 "something went wrong".into(),
-            );
+            )
         }
     }
 }

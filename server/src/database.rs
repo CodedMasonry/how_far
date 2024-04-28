@@ -18,10 +18,10 @@ pub async fn fetch_implant(id: u32) -> anyhow::Result<Option<ImplantInfo>> {
     match table.get(id)? {
         Some(val) => {
             let serialized: ImplantInfo = postcard::from_bytes(val.value())?;
-            return Ok(Some(serialized));
+            Ok(Some(serialized))
         }
-        None => return Ok(None),
-    };
+        None => Ok(None),
+    }
 }
 
 pub async fn update_implant(id: u32, info: &ImplantInfo) -> anyhow::Result<()> {
@@ -43,9 +43,9 @@ pub async fn key_exists(id: u32) -> anyhow::Result<bool> {
     let table = read_txn.open_table(DB_TABLE)?;
 
     match table.get(id)? {
-        Some(_) => return Ok(true),
-        None => return Ok(false),
-    };
+        Some(_) => Ok(true),
+        None => Ok(false),
+    }
 }
 
 /// Parse the request for Implant Id
@@ -82,9 +82,9 @@ pub async fn parse_implant_id(headers: &HeaderMap) -> anyhow::Result<Option<u32>
     };
 
     if exists {
-        return Ok(Some(id));
+        Ok(Some(id))
     } else {
-        return Ok(None);
+        Ok(None)
     }
 }
 
@@ -105,5 +105,5 @@ fn as_u32_be(array: &[u8]) -> u32 {
     ((array[0] as u32) << 24)
         + ((array[1] as u32) << 16)
         + ((array[2] as u32) << 8)
-        + ((array[3] as u32) << 0)
+        + (array[3] as u32)
 }

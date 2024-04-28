@@ -36,10 +36,10 @@ async fn _parse_flags(input: SplitWhitespace<'_>) -> (Vec<String>, HashMap<Strin
             }
             current_flag = word.trim_start_matches('-').to_owned();
         } else if !current_flag.is_empty() {
-            if word.starts_with("\"") {
+            if word.starts_with('"') {
                 long_string.push(word.trim_start_matches('\"'));
                 is_long_string = true
-            } else if word.ends_with("\"") {
+            } else if word.ends_with('"') {
                 long_string.push(word.trim_end_matches('\"'));
 
                 flags_with_args.insert(current_flag.clone(), long_string.join(" "));
@@ -47,7 +47,7 @@ async fn _parse_flags(input: SplitWhitespace<'_>) -> (Vec<String>, HashMap<Strin
                 current_flag.clear();
 
                 is_long_string = false;
-            } else if is_long_string == true {
+            } else if is_long_string {
                 long_string.push(word);
             } else {
                 flags_with_args.insert(current_flag.clone(), word.to_owned());
