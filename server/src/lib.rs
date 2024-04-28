@@ -3,6 +3,7 @@
 pub mod database;
 pub mod net;
 pub mod terminal;
+pub mod commands;
 
 use anyhow::Result;
 use async_trait::async_trait;

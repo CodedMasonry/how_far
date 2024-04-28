@@ -15,7 +15,7 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
     save_server_cert()?;
 
     if cfg!(not(debug_assertions)) {
-        println!("cargo:rerun-if-changed=.");
+        println!("cargo:rerun-if-changed=NULL");
         let id = generate_id()?;
         let id_file = Path::new(&out_dir).join("c_id");
         fs::write(&id_file, id.to_string())?;
