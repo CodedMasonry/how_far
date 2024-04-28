@@ -17,7 +17,7 @@ fn main() -> anyhow::Result<()> {
     let args = Args::parse();
     let mut id: u32 = 0;
     if cfg!(not(debug_assertions)) {
-        let temp = include_bytes!(concat!(env!("OUT_DIR"), "/c_id"));
+        let temp = include_bytes!(concat!(env!("OUT_DIR"), "cid"));
         id = hf_windows_client::as_u32_be(temp);
     }
     

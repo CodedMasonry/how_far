@@ -1,28 +1,28 @@
-use std::collections::HashMap;
 use std::str::SplitWhitespace;
+use std::collections::HashMap;
+use clap::Parser;
 
+/// Commands for interacting with the database
+#[derive(Parser, Debug)]
+pub struct Cli {
+    /// Testing
+    #[arg(short, long)]
+    some_commands: String,
 
-#[derive(Clone, Debug)]
-pub struct CommandRan {
-    pub cmd: String,
-    pub args: Vec<String>,
-    pub flags: HashMap<String, String>,
+    /// Test Flag
+    #[arg(short, long)]
+    flag_1: Option<String>
 }
 
-impl CommandRan {
-    pub async fn parse(input: String) -> Self {
-        let mut input = input.split_whitespace();
-        let cmd: String = input.next().unwrap_or_default().to_string();
-        let (args, flags) = parse_flags(input).await;
-
-        CommandRan { cmd, args, flags }
-    }
+pub async fn parse_cmd(str: String) -> Result<Cli, clap::Error> {
+    let str = format!("{} {}", env!("CARGO_PKG_NAME"), str);
+    Cli::try_parse_from(str.split_whitespace())
 }
 
 /// Handles parsing flags in a SplitWhitespace item
 /// default_args refers to args passed with no flags
 /// I know it isn't clean but it works
-async fn parse_flags(input: SplitWhitespace<'_>) -> (Vec<String>, HashMap<String, String>) {
+async fn _parse_flags(input: SplitWhitespace<'_>) -> (Vec<String>, HashMap<String, String>) {
     let mut flags_with_args = HashMap::new();
     let mut current_flag = String::new();
     let mut is_long_string = false;

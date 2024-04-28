@@ -43,7 +43,7 @@ fn generate_id() -> Result<u32, Box<dyn std::error::Error>> {
     let mut rng = rand::thread_rng();
     let id: u32 = rng.gen();
 
-    let init_data: how_far_types::AgentInfo = how_far_types::AgentInfo {
+    let init_data: how_far_types::ImplantInfo = how_far_types::ImplantInfo {
         last_check: None,
         queue: Vec::new(),
     };

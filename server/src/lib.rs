@@ -5,8 +5,6 @@ pub mod net;
 pub mod terminal;
 pub mod commands;
 
-use anyhow::Result;
-use async_trait::async_trait;
 use axum::{
     http::StatusCode,
     response::{IntoResponse, Response},
@@ -20,7 +18,6 @@ use std::{
     fs::{self, File},
     io::BufReader,
     path::PathBuf,
-    str::SplitWhitespace,
 };
 use std::{sync::LazyLock, time::SystemTime};
 
@@ -29,12 +26,6 @@ use thiserror::Error;
 pub static LOG_FILE: LazyLock<String> = LazyLock::new(|| format!("{}.log", env!("CARGO_PKG_NAME")));
 pub static CERTS: LazyLock<PathBuf> =
     LazyLock::new(|| DATA_FOLDER.data_local_dir().to_path_buf().join("certs"));
-static _COMMANDS_SET: LazyLock<Vec<Box<dyn Command>>> = LazyLock::new(|| {
-    let temp_set: Vec<Box<dyn Command>> = vec![];
-
-    //temp_set.append();
-    temp_set
-});
 
 /// Error for terminal
 #[derive(Error, Debug)]
@@ -55,17 +46,6 @@ pub enum ServerError {
 
 /// Generic error casting for http returns
 pub struct GenericError(anyhow::Error);
-
-/// Command is the default template for command modules
-/// Sub commands are EXPECTED to be handled by the run fn
-/// help fn expects module to print it's own help message (default help message functions will be provided soon)
-/// name fn is simply for indexing purposes (should return name of command)
-#[async_trait]
-pub trait Command: Send + Sync {
-    async fn run(&self, args: SplitWhitespace<'_>) -> Result<()>;
-    fn description(&self) -> String;
-    fn name(&self) -> String;
-}
 
 /// Parsing generic errors into axum errors
 impl IntoResponse for GenericError {

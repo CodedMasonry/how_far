@@ -3,13 +3,13 @@ use std::collections::HashMap;
 use anyhow::anyhow;
 use axum::http::{header, HeaderMap};
 use base64::prelude::*;
-use how_far_types::AgentInfo;
+use how_far_types::ImplantInfo;
 use how_far_types::DB_FILE;
 use how_far_types::DB_TABLE;
 use log::{debug, error};
 use redb::Database;
 
-pub async fn fetch_agent(id: u32) -> anyhow::Result<Option<AgentInfo>> {
+pub async fn fetch_implant(id: u32) -> anyhow::Result<Option<ImplantInfo>> {
     let db = Database::create(DB_FILE.as_path())?;
 
     let txn = db.begin_read()?;
@@ -17,14 +17,14 @@ pub async fn fetch_agent(id: u32) -> anyhow::Result<Option<AgentInfo>> {
 
     match table.get(id)? {
         Some(val) => {
-            let serialized: AgentInfo = postcard::from_bytes(val.value())?;
+            let serialized: ImplantInfo = postcard::from_bytes(val.value())?;
             return Ok(Some(serialized));
         }
         None => return Ok(None),
     };
 }
 
-pub async fn update_agent(id: u32, info: &AgentInfo) -> anyhow::Result<()> {
+pub async fn update_implant(id: u32, info: &ImplantInfo) -> anyhow::Result<()> {
     let db = Database::create(DB_FILE.as_path())?;
 
     let txn = db.begin_write()?;
@@ -48,9 +48,9 @@ pub async fn key_exists(id: u32) -> anyhow::Result<bool> {
     };
 }
 
-/// Parse the request for agent Id
-/// Returns Ok(None) if agent doesn't exist
-pub async fn parse_agent_id(headers: &HeaderMap) -> anyhow::Result<Option<u32>> {
+/// Parse the request for Implant Id
+/// Returns Ok(None) if Implant doesn't exist
+pub async fn parse_implant_id(headers: &HeaderMap) -> anyhow::Result<Option<u32>> {
     let cookies_head = match headers.get(header::COOKIE) {
         Some(v) => v,
         None => return Ok(None),
