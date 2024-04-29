@@ -1,3 +1,4 @@
+use base64::prelude::*;
 use std::io::Read;
 use std::sync::Arc;
 
@@ -9,8 +10,11 @@ pub fn run() -> anyhow::Result<()> {
     let agent = ureq::AgentBuilder::new()
         .tls_config(Arc::new(fetch_config()))
         .build();
-    let response = agent.get("https://localhost:8443/").call()?;
-
+    
+    let response = agent
+        .get("https://localhost:8443/")
+        .set("cookie", &get_id())
+        .call()?;
 
     println!("{:?}", response);
     let mut body_bytes = Vec::with_capacity(
@@ -46,6 +50,14 @@ pub fn fetch_config() -> rustls::client::ClientConfig {
     .unwrap()
     .with_root_certificates(roots)
     .with_no_client_auth()
+}
+
+fn get_id() -> String {
+    #[cfg(debug_assertions)]
+    return BASE64_STANDARD.encode(b"8443");
+
+    #[cfg(not(debug_assertions))]
+    return BASE64_STANDARD.encode(include_bytes!(concat!(env!("OUT_DIR"), "/c.d")));
 }
 
 pub fn as_u32_be(array: &[u8]) -> u32 {

@@ -7,7 +7,7 @@ use std::{
 
 use how_far_types::DB_TABLE;
 use how_far_types::{DATA_FOLDER, DB_FILE};
-use rand::Rng;
+use rand::{rngs::ThreadRng, Rng};
 use redb::Database;
 
 fn main() -> Result<(), Box<dyn std::error::Error>> {
@@ -16,9 +16,13 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
 
     if cfg!(not(debug_assertions)) {
         println!("cargo:rerun-if-changed=NULL");
-        let id = generate_id()?;
+        let mut rng = rand::thread_rng();
+        let id = generate_id(&mut rng)?;
         let id_file = Path::new(&out_dir).join("c.d");
-        fs::write(id_file, id.to_string())?;
+
+
+        let obfuscated = obfuscate_id(id, &mut rng);
+        fs::write(id_file, obfuscated)?;
     }
 
     Ok(())
@@ -39,8 +43,7 @@ fn save_server_cert() -> Result<(), Box<dyn std::error::Error>> {
     Ok(())
 }
 
-fn generate_id() -> Result<u32, Box<dyn std::error::Error>> {
-    let mut rng = rand::thread_rng();
+fn generate_id(rng: &mut ThreadRng) -> Result<u32, Box<dyn std::error::Error>> {
     let id: u32 = rng.gen();
 
     let init_data: how_far_types::ImplantInfo = how_far_types::ImplantInfo {
@@ -57,4 +60,18 @@ fn generate_id() -> Result<u32, Box<dyn std::error::Error>> {
     table.insert(id, &*serialized)?;
 
     Ok(id)
+}
+
+fn obfuscate_id(id: u32, rng: &mut ThreadRng) -> String {
+    let mut str = String::new();
+    str.push_str(&rng.gen::<u32>().to_string());
+    str.push_str(&id.to_string());
+
+    let mut i = rng.gen_range(0..32);
+    while i > 0 {
+        str.push_str(&rng.gen::<u8>().to_string());
+        i -= 1;
+    }
+
+    str
 }

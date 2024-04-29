@@ -11,6 +11,8 @@ goldberg = { workspace = true }
 rustls = { workspace = true, features = ["aws_lc_rs", "std", "logging"] }
 ureq = { workspace = true, features = ["brotli", "tls", "gzip"] }
 how_far_types = { path = "../how_far_types" }
+base64 = "0.22.0"
+getrandom = "0.2.14"
 
 [build-dependencies]
 chrono.workspace = true

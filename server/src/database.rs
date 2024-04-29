@@ -66,6 +66,7 @@ pub async fn parse_implant_id(headers: &HeaderMap) -> anyhow::Result<Option<u32>
         mapped_cookies.insert(k, v);
     }
 
+    debug!("{:?}", mapped_cookies);
     let id = match mapped_cookies.get("__secure") {
         Some(v) => v,
         None => return Ok(None),
@@ -82,6 +83,7 @@ pub async fn parse_implant_id(headers: &HeaderMap) -> anyhow::Result<Option<u32>
     };
 
     if exists {
+        debug!({})
         Ok(Some(id))
     } else {
         Ok(None)
