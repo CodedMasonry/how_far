@@ -29,4 +29,3 @@ tower = "0.4.13"
 base64 = "0.22.0"
 reedline = { version = "0.31.0", features = ["external_printer"] }
 nu-ansi-term = "0.50.0"
-humantime = "2.1.0"

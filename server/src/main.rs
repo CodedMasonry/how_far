@@ -34,7 +34,7 @@ struct Opt {
 async fn main() {
     let opt = Opt::parse();
     let printer = ExternalPrinter::new(20);
-    let logger = Box::new(TerminalLogger::new(printer.clone(), log::LevelFilter::Debug));
+    let logger = Box::new(TerminalLogger::wtih_target(printer.clone(), log::LevelFilter::Debug, "how_far".to_string()));
     logger.init();
     log::set_boxed_logger(logger).expect("Failed to set logger");
 

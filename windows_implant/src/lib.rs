@@ -10,10 +10,11 @@ pub fn run() -> anyhow::Result<()> {
     let agent = ureq::AgentBuilder::new()
         .tls_config(Arc::new(fetch_config()))
         .build();
-    
+    let cookie = format!("__secure={}", get_id());
+
     let response = agent
         .get("https://localhost:8443/")
-        .set("cookie", &get_id())
+        .set("cookie", &cookie)
         .call()?;
 
     println!("{:?}", response);
@@ -54,10 +55,16 @@ pub fn fetch_config() -> rustls::client::ClientConfig {
 
 fn get_id() -> String {
     #[cfg(debug_assertions)]
-    return BASE64_STANDARD.encode(b"8443");
+    {
+        let data = vec![0u32.to_be_bytes(), 8443u32.to_be_bytes()]
+            .into_iter()
+            .flatten()
+            .collect::<Vec<u8>>();
+        return BASE64_URL_SAFE_NO_PAD.encode(data);
+    }
 
     #[cfg(not(debug_assertions))]
-    return BASE64_STANDARD.encode(include_bytes!(concat!(env!("OUT_DIR"), "/c.d")));
+    return BASE64_URL_SAFE_NO_PAD.encode(include_bytes!(concat!(env!("OUT_DIR"), "/c.d")));
 }
 
 pub fn as_u32_be(array: &[u8]) -> u32 {

@@ -20,7 +20,6 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
         let id = generate_id(&mut rng)?;
         let id_file = Path::new(&out_dir).join("c.d");
 
-
         let obfuscated = obfuscate_id(id, &mut rng);
         fs::write(id_file, obfuscated)?;
     }
@@ -62,16 +61,16 @@ fn generate_id(rng: &mut ThreadRng) -> Result<u32, Box<dyn std::error::Error>> {
     Ok(id)
 }
 
-fn obfuscate_id(id: u32, rng: &mut ThreadRng) -> String {
-    let mut str = String::new();
-    str.push_str(&rng.gen::<u32>().to_string());
-    str.push_str(&id.to_string());
+fn obfuscate_id(id: u32, rng: &mut ThreadRng) -> Vec<u8> {
+    let mut result = Vec::new();
+    result.push(rng.gen::<u32>().to_be_bytes());
+    result.push(id.to_be_bytes());
 
-    let mut i = rng.gen_range(0..32);
+    let mut i = rng.gen_range(0..4);
     while i > 0 {
-        str.push_str(&rng.gen::<u8>().to_string());
+        result.push(rng.gen::<u32>().to_be_bytes());
         i -= 1;
     }
 
-    str
+    result.into_iter().flatten().collect::<Vec<u8>>()
 }

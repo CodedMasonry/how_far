@@ -1,9 +1,10 @@
 #![feature(fs_try_exists)]
 #![feature(lazy_cell)]
+pub mod commands;
 pub mod database;
 pub mod net;
 pub mod terminal;
-pub mod commands;
+pub use database::DataBase;
 
 use axum::{
     http::StatusCode,
@@ -19,7 +20,7 @@ use std::{
     io::BufReader,
     path::PathBuf,
 };
-use std::{sync::LazyLock, time::SystemTime};
+use std::sync::LazyLock;
 
 use thiserror::Error;
 
@@ -120,12 +121,18 @@ pub async fn get_cert() -> anyhow::Result<(
 pub struct TerminalLogger {
     printer: ExternalPrinter<String>,
     filter: LevelFilter,
+    target: Option<String>,
 }
 
 impl TerminalLogger {
     /// Creates a new Terminal Logger
     pub fn new(printer: ExternalPrinter<String>, filter: LevelFilter) -> Self {
-        TerminalLogger { printer, filter }
+        TerminalLogger { printer, filter, target: None }
+    }
+
+    /// Creates a new Terminal Logger with specific target
+    pub fn wtih_target(printer: ExternalPrinter<String>, filter: LevelFilter, target: String) -> Self {
+        TerminalLogger { printer, filter, target: Some(target) }
     }
 
     /// Sets log max level
@@ -136,15 +143,21 @@ impl TerminalLogger {
 
 impl log::Log for TerminalLogger {
     fn enabled(&self, metadata: &log::Metadata) -> bool {
-        metadata.level() <= self.filter
+        // Anything more verbose than set filter is ignored
+        if metadata.level() > self.filter {
+            return false;
+        }
+        
+        match &self.target {
+            Some(target) => metadata.target().contains(target),
+            None => true,
+        }
     }
 
     fn log(&self, record: &log::Record) {
         if self.enabled(record.metadata()) {
-            let time = humantime::format_rfc3339_seconds(SystemTime::now());
             let msg = format!(
-                "{} {} {}: {}",
-                time,
+                "{} {}: {}",
                 color_level(record.level()),
                 format_target(record.target()),
                 record.args()
@@ -161,14 +174,15 @@ impl log::Log for TerminalLogger {
 
 fn color_level<'a>(level: Level) -> nu_ansi_term::AnsiGenericString<'a, str> {
     match level {
-        Level::Error => Color::Red.paint("ERROR"),
-        Level::Warn => Color::Yellow.paint("WARN"),
-        Level::Info => Color::Green.paint("INFO"),
-        Level::Debug => Color::Blue.paint("DEBUG"),
-        Level::Trace => Color::Purple.paint("TRACE"),
+        Level::Error => Color::Red.paint("[-]"),
+        Level::Warn => Color::Yellow.paint("[*]"),
+        Level::Info => Color::Green.paint("[+]"),
+        Level::Debug => Color::Blue.paint("[*]"),
+        Level::Trace => Color::Purple.paint("[*]"),
     }
 }
 
-fn format_target(target: &str) -> String {
-    target.replace("::", "/")
+fn format_target<'a>(target: &str) -> nu_ansi_term::AnsiGenericString<'a, str> {
+    let target = target.replace("::", "/");
+    Color::DarkGray.paint(target)
 }

@@ -1,6 +1,6 @@
 use reedline::{DefaultPrompt, ExternalPrinter, Reedline, Signal};
 
-use crate::commands::parse_cmd;
+use crate::commands::{self, parse_cmd};
 
 pub async fn test_tui() -> Result<(), anyhow::Error> {
     Ok(())
@@ -18,7 +18,9 @@ pub async fn tui(printer: ExternalPrinter<String>) -> Result<(), anyhow::Error> 
                     let cmd = parse_cmd(buffer).await;
 
                     match cmd {
-                        Ok(v) => println!("{:#?}", v),
+                        Ok(v) => {
+                            commands::handle_cmd(&v).await;
+                        },
                         Err(e) => println!("{}", e),
                     }
                 }

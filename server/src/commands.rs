@@ -1,22 +1,46 @@
-use std::str::SplitWhitespace;
+use clap::{Parser, Subcommand};
 use std::collections::HashMap;
-use clap::Parser;
+use std::str::SplitWhitespace;
 
-/// Commands for interacting with the database
+/// Interactive server for managing implants
 #[derive(Parser, Debug)]
+#[command(version, about, long_about = None)]
+#[command(propagate_version = true)]
 pub struct Cli {
-    /// Testing
-    #[arg(short, long)]
-    some_commands: String,
+    #[command(subcommand)]
+    command: Commands,
+}
 
-    /// Test Flag
-    #[arg(short, long)]
-    flag_1: Option<String>
+#[derive(Subcommand, Debug)]
+enum Commands {
+    /// Commands for manipulating the database
+    Database {
+        #[command(subcommand)]
+        command: DatabaseCommands,
+    },
+    Exit,
+}
+
+#[derive(Subcommand, Debug)]
+enum DatabaseCommands {
+    /// Lists the entries in the database
+    List,
+    /// View specified entry
+    View {
+        id: u32
+    },
 }
 
 pub async fn parse_cmd(str: String) -> Result<Cli, clap::Error> {
-    let str = format!("{} {}", env!("CARGO_PKG_NAME"), str);
+    let str = format!(" {}", str);
     Cli::try_parse_from(str.split_whitespace())
+}
+
+pub async fn handle_cmd(cli: &Cli) {
+    match &cli.command {
+        Commands::Database { command } => todo!(),
+        Commands::Exit => todo!(),
+    }
 }
 
 /// Handles parsing flags in a SplitWhitespace item
