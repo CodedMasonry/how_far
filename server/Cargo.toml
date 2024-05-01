@@ -27,5 +27,5 @@ axum-server = { workspace = true, features = ["tls-rustls"] }
 tower-http = { version = "0.5.2", features = ["compression-br"] }
 tower = "0.4.13"
 base64 = "0.22.0"
-reedline = { version = "0.31.0", features = ["external_printer"] }
+reedline = { git = "https://github.com/nushell/reedline", features = ["external_printer"] }
 nu-ansi-term = "0.50.0"

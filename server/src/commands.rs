@@ -2,9 +2,11 @@ use clap::{Parser, Subcommand};
 use std::collections::HashMap;
 use std::str::SplitWhitespace;
 
+use crate::color_level;
+
 /// Interactive server for managing implants
 #[derive(Parser, Debug)]
-#[command(version, about, long_about = None)]
+#[command(version, about = None, long_about = None)]
 #[command(propagate_version = true)]
 pub struct Cli {
     #[command(subcommand)]
@@ -18,7 +20,6 @@ enum Commands {
         #[command(subcommand)]
         command: DatabaseCommands,
     },
-    Exit,
 }
 
 #[derive(Subcommand, Debug)]
@@ -26,20 +27,36 @@ enum DatabaseCommands {
     /// Lists the entries in the database
     List,
     /// View specified entry
-    View {
-        id: u32
-    },
+    View { id: u32 },
 }
 
 pub async fn parse_cmd(str: String) -> Result<Cli, clap::Error> {
-    let str = format!(" {}", str);
+    let str = format!("{} {}", env!("CARGO_PKG_NAME"), str);
     Cli::try_parse_from(str.split_whitespace())
 }
 
 pub async fn handle_cmd(cli: &Cli) {
     match &cli.command {
-        Commands::Database { command } => todo!(),
-        Commands::Exit => todo!(),
+        Commands::Database { command: _ } => todo!(),
+    }
+}
+
+/// Returns boolean denoting whether it successfully ran the command
+pub async fn try_external_command(
+    command: &str,
+    args: SplitWhitespace<'_>,
+) -> bool {
+    let child = tokio::process::Command::new(command).args(args).spawn();
+
+    match child {
+        Ok(mut child) => {
+            println!("{} running local: {}\n", color_level(log::Level::Info), command);
+
+            child.wait().await.unwrap();
+            return true;
+        },
+        Err(e) if e.kind() == tokio::io::ErrorKind::NotFound => return false,
+        Err(_) => return false,
     }
 }
 
