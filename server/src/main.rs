@@ -1,10 +1,12 @@
 use std::path::PathBuf;
+use std::time::Duration;
 use std::{net::SocketAddr, process};
 
 use clap::Parser;
 use how_far_server::{get_cert, terminal, TerminalLogger};
 use log::{debug, error, info};
 use reedline::ExternalPrinter;
+use tokio::time::sleep;
 use tower::ServiceBuilder;
 
 use axum::{
@@ -33,7 +35,7 @@ struct Opt {
 #[tokio::main]
 async fn main() {
     let opt = Opt::parse();
-    let printer = ExternalPrinter::new(20);
+    let printer = ExternalPrinter::new(30);
     let logger = Box::new(TerminalLogger::wtih_target(printer.clone(), log::LevelFilter::Debug, "how_far".to_string()));
     logger.init();
     log::set_boxed_logger(logger).expect("Failed to set logger");
@@ -55,6 +57,8 @@ async fn main() {
 }
 
 async fn run_listener(_options: Opt) -> anyhow::Result<()> {
+    // let the logger catch up and get ready
+    sleep(Duration::from_secs(1)).await;
     let (certs, key) = get_cert().await?;
     let certs: Vec<Vec<u8>> = certs.into_iter().map(|v| v.to_vec()).collect();
 

@@ -57,6 +57,11 @@ pub async fn tui(printer: ExternalPrinter<String>) -> Result<(), anyhow::Error> 
                     }
                 }
                 Signal::CtrlD | Signal::CtrlC => {
+                    // quicker exit for debug
+                    if cfg!(debug_assertions) {
+                    return Ok(());
+                    }
+
                     println!(
                         "{} use the 'exit' command to quit",
                         color_level(log::Level::Error)

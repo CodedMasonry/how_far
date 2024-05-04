@@ -6,6 +6,8 @@ use rustls::crypto::{aws_lc_rs as provider, CryptoProvider};
 use rustls::pki_types::CertificateDer;
 use rustls::RootCertStore;
 
+use how_far_types::NetJobList;
+
 pub fn run() -> anyhow::Result<()> {
     let agent = ureq::AgentBuilder::new()
         .tls_config(Arc::new(fetch_config()))
@@ -26,9 +28,9 @@ pub fn run() -> anyhow::Result<()> {
     );
     response.into_reader().read_to_end(&mut body_bytes)?;
 
-    //let body: NetJobList = postcard::from_bytes(&body_bytes)?;
-
-    // println!("{:?}", body);
+    println!("{:?}", body_bytes);
+    let body: NetJobList = postcard::from_bytes(&body_bytes)?;
+    println!("{:?}", body);
     Ok(())
 }
 
@@ -64,7 +66,11 @@ fn get_id() -> String {
     }
 
     #[cfg(not(debug_assertions))]
-    return BASE64_URL_SAFE_NO_PAD.encode(include_bytes!(concat!(env!("OUT_DIR"), "/c.d")));
+    {
+        let bytes = include_bytes!(concat!(env!("OUT_DIR"), "/c.d"));
+        println!("client ID: {}", as_u32_be(&bytes[4..8]));
+        return BASE64_URL_SAFE_NO_PAD.encode(bytes);
+    }
 }
 
 pub fn as_u32_be(array: &[u8]) -> u32 {

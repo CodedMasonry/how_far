@@ -13,6 +13,7 @@ ureq = { workspace = true, features = ["brotli", "tls", "gzip"] }
 how_far_types = { path = "../how_far_types" }
 base64 = "0.22.0"
 getrandom = "0.2.14"
+postcard = { workspace = true, features = ["alloc"] }
 
 [build-dependencies]
 chrono.workspace = true

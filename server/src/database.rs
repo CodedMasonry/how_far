@@ -1,4 +1,5 @@
 use std::collections::HashMap;
+use std::path::PathBuf;
 use std::sync::LazyLock;
 
 use anyhow::anyhow;
@@ -7,23 +8,26 @@ use base64::prelude::*;
 use how_far_types::ImplantInfo;
 use how_far_types::DB_FILE;
 use how_far_types::DB_TABLE;
-use log::{debug, error};
+use log::debug;
+use log::error;
 
-pub static IMPLANT_DB: LazyLock<DataBase> = LazyLock::new(|| DataBase::build().unwrap());
+pub static IMPLANT_DB: LazyLock<DataBase> = LazyLock::new(|| DataBase::build(DB_FILE.to_path_buf()).unwrap());
 
 pub struct DataBase {
-    pub db: redb::Database,
+    pub db_path: PathBuf,
 }
 
 impl DataBase {
-    pub fn build() -> Result<Self, anyhow::Error> {
-        let db = redb::Database::create(DB_FILE.as_path())?;
+    pub fn build(db_path: PathBuf) -> Result<Self, anyhow::Error> {
+        Ok(DataBase { db_path })
+    }
 
-        Ok(DataBase { db })
+    fn lock(&self) -> Result<redb::Database, redb::DatabaseError> {
+        redb::Database::create(self.db_path.as_path())
     }
 
     pub async fn fetch_implant(&self, id: u32) -> anyhow::Result<Option<ImplantInfo>> {
-        let txn = self.db.begin_read()?;
+        let txn = self.lock()?.begin_read()?;
         let table = txn.open_table(DB_TABLE)?;
         match table.get(id)? {
             Some(val) => {
@@ -35,7 +39,7 @@ impl DataBase {
     }
 
     pub async fn update_implant(&self, id: u32, info: &ImplantInfo) -> anyhow::Result<()> {
-        let txn = self.db.begin_write()?;
+        let txn = self.lock()?.begin_write()?;
         {
             let mut table = txn.open_table(DB_TABLE)?;
 
@@ -49,11 +53,14 @@ impl DataBase {
     }
 
     pub async fn key_exists(&self, id: u32) -> anyhow::Result<bool> {
-        let read_txn = self.db.begin_read()?;
+        let read_txn = self.lock()?.begin_read()?;
         let table = read_txn.open_table(DB_TABLE)?;
 
         match table.get(id)? {
-            Some(_) => Ok(true),
+            Some(v) => {
+                debug!("{:?}", v.value());
+                Ok(true)
+            },
             None => Ok(false),
         }
     }
@@ -82,6 +89,7 @@ impl DataBase {
         };
 
         let id = deobfuscate_id(id).await?;
+        debug!("id de-obfuscated");
 
         let exists = match self.key_exists(id).await {
             Ok(v) => v,
@@ -91,6 +99,7 @@ impl DataBase {
             }
         };
 
+        debug!("exists: {exists}");
         if exists {
             Ok(Some(id))
         } else {
