@@ -1,3 +1,5 @@
+mod data;
+
 use clap::{Parser, Subcommand};
 use std::collections::HashMap;
 use std::str::SplitWhitespace;
@@ -37,24 +39,25 @@ pub async fn parse_cmd(str: String) -> Result<Cli, clap::Error> {
 
 pub async fn handle_cmd(cli: &Cli) {
     match &cli.command {
-        Commands::Database { command: _ } => todo!(),
+        Commands::Database { command } => data::handle_database_cmds(command).await,
     }
 }
 
 /// Returns boolean denoting whether it successfully ran the command
-pub async fn try_external_command(
-    command: &str,
-    args: SplitWhitespace<'_>,
-) -> bool {
+pub async fn try_external_command(command: &str, args: SplitWhitespace<'_>) -> bool {
     let child = tokio::process::Command::new(command).args(args).spawn();
 
     match child {
         Ok(mut child) => {
-            println!("{} running local: {}\n", color_level(log::Level::Info), command);
+            println!(
+                "{} running local: {}\n",
+                color_level(log::Level::Info),
+                command
+            );
 
             child.wait().await.unwrap();
             return true;
-        },
+        }
         Err(e) if e.kind() == tokio::io::ErrorKind::NotFound => return false,
         Err(_) => return false,
     }

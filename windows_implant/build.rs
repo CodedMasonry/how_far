@@ -52,11 +52,13 @@ fn generate_id(rng: &mut ThreadRng) -> Result<u32, Box<dyn std::error::Error>> {
     let db = Database::create(DB_FILE.as_path())?;
 
     let txn = db.begin_write()?;
-    let mut table = txn.open_table(DB_TABLE)?;
+    {
+        let mut table = txn.open_table(DB_TABLE)?;
+        let serialized: Vec<u8> = postcard::to_allocvec(&init_data)?;
 
-    let serialized: Vec<u8> = postcard::to_allocvec(&init_data)?;
-
-    table.insert(id, &*serialized)?;
+        table.insert(id, &*serialized)?;
+    }
+    txn.commit()?;
 
     Ok(id)
 }

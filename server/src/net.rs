@@ -10,22 +10,19 @@ use crate::database::IMPLANT_DB;
 pub async fn fetch_queue(request: &HeaderMap) -> anyhow::Result<Vec<u8>> {
     let id = match IMPLANT_DB.parse_implant_id(request).await? {
         Some(v) => {
-            debug!("valid id: {}", v);
             v
         },
         None => {
-            debug!("invalid id");
+            debug!("id doesn't exist");
             return Ok(b"OK".to_vec())
         },
     };
 
     let implant = match IMPLANT_DB.fetch_implant(id).await? {
         Some(v) => {
-            debug!("implant exists: {:?}", v);
             v
         },
         None => {
-            debug!("implant doesn't exist");
             return Ok(b"OK".to_vec())
         },
     };

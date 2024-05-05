@@ -10,8 +10,14 @@ use how_far_types::DB_FILE;
 use how_far_types::DB_TABLE;
 use log::debug;
 use log::error;
+use redb::ReadableTable;
 
-pub static IMPLANT_DB: LazyLock<DataBase> = LazyLock::new(|| DataBase::build(DB_FILE.to_path_buf()).unwrap());
+pub static IMPLANT_DB: LazyLock<DataBase> = LazyLock::new(|| {
+    let db = DataBase::build(DB_FILE.to_path_buf()).expect("failed to create database");
+    db.init_table().expect("failed to create table");
+
+    db
+});
 
 pub struct DataBase {
     pub db_path: PathBuf,
@@ -24,6 +30,32 @@ impl DataBase {
 
     fn lock(&self) -> Result<redb::Database, redb::DatabaseError> {
         redb::Database::create(self.db_path.as_path())
+    }
+
+    /// helper function to initialize the table if it doesn't exist
+    pub fn init_table(&self) -> Result<(), anyhow::Error> {
+        let txn = self.lock()?.begin_write()?;
+        txn.open_table(DB_TABLE)?;
+        txn.commit()?;
+        Ok(())
+    }
+
+    pub async fn list_implants(&self) -> anyhow::Result<Vec<(u32, ImplantInfo)>> {
+        let txn = self.lock()?.begin_read()?;
+        let table = txn.open_table(DB_TABLE)?;
+        let mut result = Vec::new();
+
+        for implant in table.iter()? {
+            if let Ok(record) = implant {
+                if let Ok(info) =
+                    postcard::from_bytes::<how_far_types::ImplantInfo>(record.1.value())
+                {
+                    result.push((record.0.value(), info));
+                }
+            }
+        }
+
+        Ok(result)
     }
 
     pub async fn fetch_implant(&self, id: u32) -> anyhow::Result<Option<ImplantInfo>> {
@@ -47,7 +79,7 @@ impl DataBase {
 
             table.insert(id, &*serialized)?;
         }
-        
+
         txn.commit()?;
         Ok(())
     }
@@ -57,10 +89,7 @@ impl DataBase {
         let table = read_txn.open_table(DB_TABLE)?;
 
         match table.get(id)? {
-            Some(v) => {
-                debug!("{:?}", v.value());
-                Ok(true)
-            },
+            Some(_) => Ok(true),
             None => Ok(false),
         }
     }
@@ -89,17 +118,15 @@ impl DataBase {
         };
 
         let id = deobfuscate_id(id).await?;
-        debug!("id de-obfuscated");
 
         let exists = match self.key_exists(id).await {
             Ok(v) => v,
             Err(e) => {
-                error!("Error fetching database: {:?}", e);
+                error!("Error reading database: {:?}", e);
                 return Ok(None);
             }
         };
 
-        debug!("exists: {exists}");
         if exists {
             Ok(Some(id))
         } else {

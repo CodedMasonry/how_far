@@ -1,5 +1,5 @@
 #![feature(lazy_cell)]
-use std::{path::PathBuf, sync::LazyLock};
+use std::{fmt, path::PathBuf, sync::LazyLock};
 
 use directories::ProjectDirs;
 use redb::TableDefinition;
@@ -23,7 +23,7 @@ pub enum ImplantJobType {
     Sleep,
     Run,
     Cleanup,
-    Terminal,
+    Interactive,
 }
 
 #[derive(Clone, Debug, Serialize, Deserialize)]
@@ -50,4 +50,28 @@ pub struct ImplantJobInner {
 #[derive(Clone, Debug, Serialize, Deserialize)]
 pub struct NetJobList {
     pub jobs: Vec<ImplantJobInner>,
+}
+
+impl fmt::Display for ImplantJobType {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        let str = match self {
+            ImplantJobType::Sleep => "sleep",
+            ImplantJobType::Run => "run",
+            ImplantJobType::Cleanup => "cleanup",
+            ImplantJobType::Interactive => "interactive",
+        };
+        write!(f, "{str}")
+    }
+}
+
+impl fmt::Display for ImplantJob {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        write!(f, "[{}]: {}", self.issue_time, self.job)
+    }
+}
+
+impl fmt::Display for ImplantJobInner {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        write!(f, "request: {}, args: {})", self.request_type, self.args.join(" "))
+    }
 }
