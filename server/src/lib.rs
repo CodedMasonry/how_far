@@ -172,7 +172,7 @@ impl log::Log for TerminalLogger {
     fn flush(&self) {}
 }
 
-fn color_level<'a>(level: Level) -> nu_ansi_term::AnsiGenericString<'a, str> {
+pub fn color_level<'a>(level: Level) -> nu_ansi_term::AnsiGenericString<'a, str> {
     match level {
         Level::Error => Color::Red.paint("[-]"),
         Level::Warn => Color::Yellow.paint("[*]"),

@@ -17,10 +17,11 @@ pub struct Cli {
 
 #[derive(Subcommand, Debug)]
 enum Commands {
-    /// Commands for manipulating the database
+    /// Commands for manipulating the database; Alias: db
+    #[command(alias = "db")]
     Database {
         #[command(subcommand)]
-        command: DatabaseCommands,
+        command: Option<DatabaseCommands>,
     },
 }
 
@@ -30,6 +31,10 @@ enum DatabaseCommands {
     List,
     /// View specified entry
     View { id: u32 },
+
+    /// Removes the specified entry
+    #[clap(alias = "rm")]
+    Remove { id: u32, yes: bool },
 }
 
 pub async fn parse_cmd(str: String) -> Result<Cli, clap::Error> {

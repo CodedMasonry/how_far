@@ -84,6 +84,17 @@ impl DataBase {
         Ok(())
     }
 
+    pub async fn remove_implant(&self, id: u32) -> anyhow::Result<()> {
+        let txn = self.lock()?.begin_write()?;
+        {
+            let mut table = txn.open_table(DB_TABLE)?;
+            table.remove(id)?;
+        }
+
+        txn.commit()?;
+        Ok(())
+    }
+
     pub async fn key_exists(&self, id: u32) -> anyhow::Result<bool> {
         let read_txn = self.lock()?.begin_read()?;
         let table = read_txn.open_table(DB_TABLE)?;

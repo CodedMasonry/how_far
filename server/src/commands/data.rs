@@ -1,14 +1,20 @@
 use log::{error, info};
+use std::io;
 use tabled::{builder::Builder, settings::Style};
 
 use crate::database;
 
 use super::DatabaseCommands;
 
-pub async fn handle_database_cmds(command: &DatabaseCommands) {
-    match command {
-        DatabaseCommands::List => list().await,
-        DatabaseCommands::View { id } => view(*id).await,
+pub async fn handle_database_cmds(command: &Option<DatabaseCommands>) {
+    if let Some(command) = command {
+        match command {
+            DatabaseCommands::List => list().await,
+            DatabaseCommands::View { id } => view(*id).await,
+            DatabaseCommands::Remove { id, yes } => remove(*id, *yes).await,
+        }
+    } else {
+        list().await;
     }
 }
 
@@ -69,13 +75,60 @@ async fn view(id: u32) {
         None => String::from("Never"),
     };
 
-    let mut queue = info.queue.into_iter().map(|v| v.to_string()).collect::<Vec<String>>().join("\n");
+    let mut queue = info
+        .queue
+        .into_iter()
+        .map(|v| v.to_string())
+        .collect::<Vec<String>>()
+        .join("\n");
     if queue.is_empty() {
         queue.push_str("None")
     }
 
     println!(
         "AGENT {}\n{}\nlast connection: {}\njobs: {}",
-        id, "-".repeat(15), last_check, queue
+        id,
+        "-".repeat(15),
+        last_check,
+        queue
     );
+}
+
+async fn remove(id: u32, is_yes: bool) {
+    view(id).await;
+
+    if !is_yes {
+        return;
+    }
+
+    if !confirm().await {
+        return;
+    }
+
+    match database::IMPLANT_DB.remove_implant(id).await {
+        Ok(_) => info!("successfully deleted {}", id),
+        Err(_) => todo!(),
+    }
+}
+
+async fn confirm() -> bool {
+    print!(
+        "\n{} Are you sure you wish to delete? [y/N]",
+        crate::color_level(log::Level::Info)
+    );
+    let mut buf = String::new();
+
+    match io::stdin().read_line(&mut buf) {
+        Ok(_) => {}
+        Err(e) => {
+            eprintln!("{} {}", crate::color_level(log::Level::Error), e);
+            return false;
+        }
+    };
+
+    if buf.contains("y") {
+        true
+    } else {
+        false
+    }
 }
