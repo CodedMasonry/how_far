@@ -9,7 +9,6 @@ use crate::color_level;
 /// Interactive server for managing implants
 #[derive(Parser, Debug)]
 #[command(version, about = None, long_about = None)]
-#[command(propagate_version = true)]
 pub struct Cli {
     #[command(subcommand)]
     command: Commands,
@@ -33,8 +32,8 @@ enum DatabaseCommands {
     View { id: u32 },
 
     /// Removes the specified entry
-    #[clap(alias = "rm")]
-    Remove { id: u32, yes: bool },
+    #[command(alias = "rm")]
+    Remove { id: u32},
 }
 
 pub async fn parse_cmd(str: String) -> Result<Cli, clap::Error> {
@@ -61,10 +60,10 @@ pub async fn try_external_command(command: &str, args: SplitWhitespace<'_>) -> b
             );
 
             child.wait().await.unwrap();
-            return true;
+            true
         }
-        Err(e) if e.kind() == tokio::io::ErrorKind::NotFound => return false,
-        Err(_) => return false,
+        Err(e) if e.kind() == tokio::io::ErrorKind::NotFound => false,
+        Err(_) => false,
     }
 }
 
@@ -83,7 +82,7 @@ async fn _parse_flags(input: SplitWhitespace<'_>) -> (Vec<String>, HashMap<Strin
             if !current_flag.is_empty() {
                 flags_with_args.insert(current_flag.clone(), String::new());
             }
-            current_flag = word.trim_start_matches('-').to_owned();
+            word.trim_start_matches('-').clone_into(&mut current_flag);
         } else if !current_flag.is_empty() {
             if word.starts_with('"') {
                 long_string.push(word.trim_start_matches('\"'));

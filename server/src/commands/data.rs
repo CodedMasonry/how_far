@@ -11,7 +11,7 @@ pub async fn handle_database_cmds(command: &Option<DatabaseCommands>) {
         match command {
             DatabaseCommands::List => list().await,
             DatabaseCommands::View { id } => view(*id).await,
-            DatabaseCommands::Remove { id, yes } => remove(*id, *yes).await,
+            DatabaseCommands::Remove { id } => remove(*id).await,
         }
     } else {
         list().await;
@@ -94,13 +94,13 @@ async fn view(id: u32) {
     );
 }
 
-async fn remove(id: u32, is_yes: bool) {
-    view(id).await;
-
-    if !is_yes {
+async fn remove(id: u32) {
+    if !database::IMPLANT_DB.key_exists(id).await.unwrap_or_default() {
+        eprintln!("{} implant doesn't exist", crate::color_level(log::Level::Warn));
         return;
     }
 
+    view(id).await;
     if !confirm().await {
         return;
     }
@@ -112,7 +112,7 @@ async fn remove(id: u32, is_yes: bool) {
 }
 
 async fn confirm() -> bool {
-    print!(
+    println!(
         "\n{} Are you sure you wish to delete? [y/N]",
         crate::color_level(log::Level::Info)
     );

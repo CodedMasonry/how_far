@@ -1,3 +1,5 @@
+#![deny(clippy::all)]
+
 use std::path::PathBuf;
 use std::time::Duration;
 use std::{net::SocketAddr, process};

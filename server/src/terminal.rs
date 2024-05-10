@@ -22,7 +22,7 @@ pub async fn tui(printer: ExternalPrinter<String>) -> Result<(), anyhow::Error> 
         if let Ok(sig) = line_editor.read_line(&prompt) {
             match sig {
                 Signal::Success(buffer) => {
-                    if buffer == String::from("exit") {
+                    if buffer == *"exit" {
                         return Ok(());
                     }
 
@@ -32,7 +32,7 @@ pub async fn tui(printer: ExternalPrinter<String>) -> Result<(), anyhow::Error> 
 
                         let new_dir = split.peekable().peek().map_or("/", |x| *x);
                         let root = Path::new(new_dir);
-                        if let Err(e) = env::set_current_dir(&root) {
+                        if let Err(e) = env::set_current_dir(root) {
                             eprintln!("{}", e);
                         }
 

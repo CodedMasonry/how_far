@@ -45,13 +45,9 @@ impl DataBase {
         let table = txn.open_table(DB_TABLE)?;
         let mut result = Vec::new();
 
-        for implant in table.iter()? {
-            if let Ok(record) = implant {
-                if let Ok(info) =
-                    postcard::from_bytes::<how_far_types::ImplantInfo>(record.1.value())
-                {
-                    result.push((record.0.value(), info));
-                }
+        for implant in (table.iter()?).flatten() {
+            if let Ok(info) = postcard::from_bytes::<how_far_types::ImplantInfo>(implant.1.value()) {
+                result.push((implant.0.value(), info));
             }
         }
 
