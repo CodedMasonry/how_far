@@ -10,11 +10,12 @@ use axum::{
     http::StatusCode,
     response::{IntoResponse, Response},
 };
-use how_far_types::DATA_FOLDER;
+use how_far_types::{ImplantInfo, DATA_FOLDER};
 use log::{debug, error, info, Level, LevelFilter};
 use nu_ansi_term::Color;
 use rcgen::{date_time_ymd, CertificateParams, DistinguishedName, DnType, KeyPair, SanType};
 use reedline::ExternalPrinter;
+use tokio::sync::Mutex;
 use std::{
     fs::{self, File},
     io::BufReader,
@@ -27,6 +28,7 @@ use thiserror::Error;
 pub static LOG_FILE: LazyLock<String> = LazyLock::new(|| format!("{}.log", env!("CARGO_PKG_NAME")));
 pub static CERTS: LazyLock<PathBuf> =
     LazyLock::new(|| DATA_FOLDER.data_local_dir().to_path_buf().join("certs"));
+pub static SELECTED_AGENT: LazyLock<Mutex<Option<(u32, ImplantInfo)>>> = LazyLock::new(|| Mutex::new(None));
 
 /// Error for terminal
 #[derive(Error, Debug)]

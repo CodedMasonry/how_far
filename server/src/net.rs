@@ -27,6 +27,10 @@ pub async fn fetch_queue(request: &HeaderMap) -> anyhow::Result<Vec<u8>> {
         },
     };
 
+    let mut updated_info = implant.clone();
+    updated_info.last_check = Some(chrono::Utc::now());
+    IMPLANT_DB.update_implant(id, &updated_info).await?;
+
     let mut jobs = Vec::new();
     for job in implant.queue {
         match implant.last_check {

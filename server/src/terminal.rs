@@ -1,6 +1,6 @@
-use std::{env, path::Path};
+use std::{borrow::Cow, cell::Cell, env, path::Path};
 
-use reedline::{DefaultPrompt, ExternalPrinter, Reedline, Signal};
+use reedline::{DefaultPrompt, ExternalPrinter, Prompt, PromptEditMode, PromptHistorySearch, PromptHistorySearchStatus, Reedline, Signal};
 
 use crate::{
     color_level,
@@ -10,9 +10,48 @@ use crate::{
 /// Purely so code is understandable
 const SUCCESS: bool = true;
 
-pub async fn test_tui() -> Result<(), anyhow::Error> {
-    Ok(())
+#[derive(Clone)]
+pub struct CustomPrompt(Cell<u32>, &'static str);
+pub static DEFAULT_MULTILINE_INDICATOR: &str = "::: ";
+impl Prompt for CustomPrompt {
+    fn render_prompt_left(&self) -> Cow<str> {
+        {
+            Cow::Owned(self.1.to_string())
+        }
+    }
+
+    fn render_prompt_right(&self) -> Cow<str> {
+        {
+            let old = self.0.get();
+            self.0.set(old + 1);
+            Cow::Owned(format!("[{old}]"))
+        }
+    }
+
+    fn render_prompt_indicator(&self, _edit_mode: PromptEditMode) -> Cow<str> {
+        Cow::Owned(">".to_string())
+    }
+
+    fn render_prompt_multiline_indicator(&self) -> Cow<str> {
+        Cow::Borrowed(DEFAULT_MULTILINE_INDICATOR)
+    }
+
+    fn render_prompt_history_search_indicator(
+        &self,
+        history_search: PromptHistorySearch,
+    ) -> Cow<str> {
+        let prefix = match history_search.status {
+            PromptHistorySearchStatus::Passing => "",
+            PromptHistorySearchStatus::Failing => "failing ",
+        };
+
+        Cow::Owned(format!(
+            "({}reverse-search: {}) ",
+            prefix, history_search.term
+        ))
+    }
 }
+
 
 pub async fn tui(printer: ExternalPrinter<String>) -> Result<(), anyhow::Error> {
     let mut line_editor = Reedline::create().with_external_printer(printer);

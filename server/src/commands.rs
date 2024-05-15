@@ -1,4 +1,5 @@
 mod data;
+mod implant;
 
 use clap::{Parser, Subcommand};
 use std::collections::HashMap;
@@ -22,6 +23,10 @@ enum Commands {
         #[command(subcommand)]
         command: Option<DatabaseCommands>,
     },
+
+    /// Sets the current interactive agent
+    #[command()]
+    Select { id: u32 },
 }
 
 #[derive(Subcommand, Debug)]
@@ -33,7 +38,7 @@ enum DatabaseCommands {
 
     /// Removes the specified entry
     #[command(alias = "rm")]
-    Remove { id: u32},
+    Remove { id: u32 },
 }
 
 pub async fn parse_cmd(str: String) -> Result<Cli, clap::Error> {
@@ -44,6 +49,7 @@ pub async fn parse_cmd(str: String) -> Result<Cli, clap::Error> {
 pub async fn handle_cmd(cli: &Cli) {
     match &cli.command {
         Commands::Database { command } => data::handle_database_cmds(command).await,
+        Commands::Select { id } => implant::select_agent(*id).await,
     }
 }
 
