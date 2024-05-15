@@ -1,6 +1,9 @@
-use std::{borrow::Cow, cell::Cell, env, path::Path};
+use std::{borrow::Cow, env, path::Path};
 
-use reedline::{DefaultPrompt, ExternalPrinter, Prompt, PromptEditMode, PromptHistorySearch, PromptHistorySearchStatus, Reedline, Signal};
+use reedline::{
+    ExternalPrinter, Prompt, PromptEditMode, PromptHistorySearch, PromptHistorySearchStatus,
+    Reedline, Signal,
+};
 
 use crate::{
     color_level,
@@ -11,25 +14,36 @@ use crate::{
 const SUCCESS: bool = true;
 
 #[derive(Clone)]
-pub struct CustomPrompt(Cell<u32>, &'static str);
-pub static DEFAULT_MULTILINE_INDICATOR: &str = "::: ";
+pub struct CustomPrompt(&'static str);
+pub static DEFAULT_MULTILINE_INDICATOR: &str = ">>> ";
 impl Prompt for CustomPrompt {
     fn render_prompt_left(&self) -> Cow<str> {
         {
-            Cow::Owned(self.1.to_string())
+            match crate::SELECTED_AGENT.lock().unwrap().clone() {
+                Some(v) => Cow::Owned(format!(
+                    "{}{}",
+                    self.0.to_string(),
+                    nu_ansi_term::Color::Default
+                        .underline()
+                        .paint(v.0.to_string())
+                )),
+                None => Cow::Owned(format!(
+                    "{} {}",
+                    self.0.to_string(),
+                    nu_ansi_term::Color::Default.underline().paint("server")
+                )),
+            }
         }
     }
 
     fn render_prompt_right(&self) -> Cow<str> {
         {
-            let old = self.0.get();
-            self.0.set(old + 1);
-            Cow::Owned(format!("[{old}]"))
+            Cow::Borrowed("")
         }
     }
 
     fn render_prompt_indicator(&self, _edit_mode: PromptEditMode) -> Cow<str> {
-        Cow::Owned(">".to_string())
+        Cow::Owned("> ".to_string())
     }
 
     fn render_prompt_multiline_indicator(&self) -> Cow<str> {
@@ -50,12 +64,19 @@ impl Prompt for CustomPrompt {
             prefix, history_search.term
         ))
     }
-}
 
+    fn get_prompt_color(&self) -> reedline::Color {
+        reedline::Color::White
+    }
+
+    fn get_indicator_color(&self) -> reedline::Color {
+        reedline::Color::White
+    }
+}
 
 pub async fn tui(printer: ExternalPrinter<String>) -> Result<(), anyhow::Error> {
     let mut line_editor = Reedline::create().with_external_printer(printer);
-    let prompt = DefaultPrompt::default();
+    let prompt = CustomPrompt("[how_far] ");
 
     loop {
         if let Ok(sig) = line_editor.read_line(&prompt) {
@@ -98,7 +119,7 @@ pub async fn tui(printer: ExternalPrinter<String>) -> Result<(), anyhow::Error> 
                 Signal::CtrlD | Signal::CtrlC => {
                     // quicker exit for debug
                     if cfg!(debug_assertions) {
-                    return Ok(());
+                        return Ok(());
                     }
 
                     println!(

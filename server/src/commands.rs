@@ -26,7 +26,7 @@ enum Commands {
 
     /// Sets the current interactive agent
     #[command()]
-    Select { id: u32 },
+    Use { id: u32 },
 }
 
 #[derive(Subcommand, Debug)]
@@ -49,7 +49,7 @@ pub async fn parse_cmd(str: String) -> Result<Cli, clap::Error> {
 pub async fn handle_cmd(cli: &Cli) {
     match &cli.command {
         Commands::Database { command } => data::handle_database_cmds(command).await,
-        Commands::Select { id } => implant::select_agent(*id).await,
+        Commands::Use { id } => implant::select_agent(*id).await,
     }
 }
 
