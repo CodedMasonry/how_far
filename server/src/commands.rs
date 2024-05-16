@@ -24,8 +24,8 @@ enum Commands {
         command: Option<DatabaseCommands>,
     },
 
-    /// Sets the current interactive agent
-    #[command()]
+    /// Sets the current interactive agent; Alias = select
+    #[command(alias = "select")]
     Use { id: u32 },
 }
 

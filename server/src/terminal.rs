@@ -21,16 +21,15 @@ impl Prompt for CustomPrompt {
         {
             match crate::SELECTED_AGENT.lock().unwrap().clone() {
                 Some(v) => Cow::Owned(format!(
-                    "{}{}",
+                    "{} ({}) ",
                     self.0.to_string(),
                     nu_ansi_term::Color::Default
                         .underline()
                         .paint(v.0.to_string())
                 )),
                 None => Cow::Owned(format!(
-                    "{} {}",
+                    "{} ",
                     self.0.to_string(),
-                    nu_ansi_term::Color::Default.underline().paint("server")
                 )),
             }
         }
@@ -76,7 +75,7 @@ impl Prompt for CustomPrompt {
 
 pub async fn tui(printer: ExternalPrinter<String>) -> Result<(), anyhow::Error> {
     let mut line_editor = Reedline::create().with_external_printer(printer);
-    let prompt = CustomPrompt("[how_far] ");
+    let prompt = CustomPrompt("how_far");
 
     loop {
         if let Ok(sig) = line_editor.read_line(&prompt) {
