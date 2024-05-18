@@ -7,7 +7,7 @@ use reedline::{
 
 use crate::{
     color_level,
-    commands::{self, parse_cmd, try_external_command},
+    commands::{self, parse_cmd, parse_implant_cmd, try_external_command},
 };
 
 /// Purely so code is understandable
@@ -27,10 +27,7 @@ impl Prompt for CustomPrompt {
                         .underline()
                         .paint(v.0.to_string())
                 )),
-                None => Cow::Owned(format!(
-                    "{} ",
-                    self.0.to_string(),
-                )),
+                None => Cow::Owned(format!("{} ", self.0.to_string(),)),
             }
         }
     }
@@ -81,7 +78,7 @@ pub async fn tui(printer: ExternalPrinter<String>) -> Result<(), anyhow::Error> 
         if let Ok(sig) = line_editor.read_line(&prompt) {
             match sig {
                 Signal::Success(buffer) => {
-                    if buffer == *"exit" {
+                    if buffer == *"exit" && crate::SELECTED_AGENT.lock().unwrap().is_none() {
                         return Ok(());
                     }
 
@@ -98,21 +95,35 @@ pub async fn tui(printer: ExternalPrinter<String>) -> Result<(), anyhow::Error> 
                         continue;
                     }
 
-                    let cmd = parse_cmd(buffer.clone()).await;
-                    match cmd {
-                        Ok(v) => {
-                            commands::handle_cmd(&v).await;
-                        }
-                        Err(e) if e.kind() == clap::error::ErrorKind::InvalidSubcommand => {
-                            // Code to check if command exists and if so run it
-                            let mut split = buffer.split_whitespace();
-                            if try_external_command(split.next().unwrap_or_default(), split).await
-                                != SUCCESS
-                            {
+                    if crate::SELECTED_AGENT.lock().unwrap().is_some() {
+                        let cmd = parse_implant_cmd(buffer.clone()).await;
+                        match cmd {
+                            Ok(v) => {
+                                commands::handle_implant_cmd(&v).await;
+                            }
+                            Err(e) if e.kind() == clap::error::ErrorKind::InvalidSubcommand => {
                                 eprintln!("{} Unknown command: use the 'help' command to view possible commands", color_level(log::Level::Warn))
                             }
+                            Err(e) => println!("{}", e),
                         }
-                        Err(e) => println!("{}", e),
+                    } else {
+                        let cmd = parse_cmd(buffer.clone()).await;
+                        match cmd {
+                            Ok(v) => {
+                                commands::handle_cmd(&v).await;
+                            }
+                            Err(e) if e.kind() == clap::error::ErrorKind::InvalidSubcommand => {
+                                // Code to check if command exists and if so run it
+                                let mut split = buffer.split_whitespace();
+                                if try_external_command(split.next().unwrap_or_default(), split)
+                                    .await
+                                    != SUCCESS
+                                {
+                                    eprintln!("{} Unknown command: use the 'help' command to view possible commands", color_level(log::Level::Warn))
+                                }
+                            }
+                            Err(e) => println!("{}", e),
+                        }
                     }
                 }
                 Signal::CtrlD | Signal::CtrlC => {

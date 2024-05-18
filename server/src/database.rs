@@ -6,6 +6,7 @@ use anyhow::anyhow;
 use axum::http::{header, HeaderMap};
 use base64::prelude::*;
 use how_far_types::ImplantInfo;
+use how_far_types::ImplantJob;
 use how_far_types::DB_FILE;
 use how_far_types::DB_TABLE;
 use log::debug;
@@ -85,6 +86,22 @@ impl DataBase {
         {
             let mut table = txn.open_table(DB_TABLE)?;
             table.remove(id)?;
+        }
+
+        txn.commit()?;
+        Ok(())
+    }
+
+    pub async fn push_job(&self, id: u32, job: ImplantJob) -> anyhow::Result<()> {
+        let mut implant = match self.fetch_implant(id).await? {
+            Some(v) => v,
+            None => return Err(anyhow!("implant doesn't exist")),
+        };
+        let txn = self.lock()?.begin_write()?;
+        {
+            let mut table = txn.open_table(DB_TABLE)?;
+            implant.queue.push(job);
+            table.insert(id, &*implant.to_bytes()?)?;
         }
 
         txn.commit()?;

