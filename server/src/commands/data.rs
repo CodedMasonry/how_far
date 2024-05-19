@@ -32,7 +32,7 @@ async fn list() {
 
     for (id, info) in data {
         let last_check = match info.last_check {
-            Some(v) => v.format("%d/%m/%Y %H:%M").to_string(),
+            Some(v) => v.format("%d/%m/%Y %H:%M UTC").to_string(),
             None => String::from("Never"),
         };
 
@@ -71,7 +71,7 @@ async fn view(id: u32) {
         }
     };
     let last_check = match info.last_check {
-        Some(v) => v.format("%d/%m/%Y %H:%M").to_string(),
+        Some(v) => v.format("%d/%m/%Y %H:%M UTC").to_string(),
         None => String::from("Never"),
     };
 

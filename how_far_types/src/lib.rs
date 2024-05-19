@@ -1,10 +1,10 @@
 #![feature(lazy_cell)]
 use std::{fmt, path::PathBuf, str::FromStr, sync::LazyLock};
 
+use chrono::Utc;
 use directories::ProjectDirs;
 use redb::TableDefinition;
 use serde::{Deserialize, Serialize};
-use chrono::Utc;
 use strum::EnumString;
 use thiserror::Error;
 
@@ -23,20 +23,22 @@ pub static DB_FILE: LazyLock<PathBuf> = LazyLock::new(|| {
 #[derive(Error, Debug)]
 pub enum TypeError {
     #[error("Job Command Doesn't exist")]
-    InvalidJobCommand
+    InvalidJobCommand,
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub enum ImplantJobType {
     Sleep,
-    Run(String),
+    Run { cmd: String },
     Cleanup,
     Interactive,
 }
 
-
 #[derive(Clone, Debug, Serialize, Deserialize)]
 pub struct ImplantInfo {
+    // Expect: OS/ARCH
+    pub platform: String,
+
     pub last_check: Option<chrono::DateTime<Utc>>,
     pub queue: Vec<ImplantJob>,
 }
@@ -62,7 +64,8 @@ pub struct NetJobList {
 }
 
 /// List of possible commands that can be ran on an agent / implant
-#[derive(Debug, strum::Display, Clone, Serialize, Deserialize, EnumString)]
+#[derive(Debug, strum::Display, Clone, Serialize, Deserialize, EnumString, strum::EnumIter)]
+#[strum(serialize_all = "lowercase")]
 pub enum JobCommand {
     Ls,
     Pwd,
@@ -78,12 +81,12 @@ pub enum JobCommand {
     Sysinfo,
 
     #[strum(disabled)]
-    WindowsCommand(WindowsJobCommand)
+    WindowsCommand(WindowsJobCommand),
 }
 
-#[derive(Debug, Clone, Serialize, Deserialize, EnumString)]
+#[derive(Debug, strum::Display, Clone, Serialize, Deserialize, EnumString, strum::EnumIter)]
 pub enum WindowsJobCommand {
-    Migrate {id: u32},
+    Migrate { id: u32 },
 }
 
 impl ImplantInfo {
@@ -96,7 +99,7 @@ impl fmt::Display for ImplantJobType {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         let str = match self {
             ImplantJobType::Sleep => "sleep",
-            ImplantJobType::Run(v) => &format!("run {}", v),
+            ImplantJobType::Run { cmd } => &format!("run {}", cmd),
             ImplantJobType::Cleanup => "cleanup",
             ImplantJobType::Interactive => "interactive",
         };
@@ -112,7 +115,12 @@ impl fmt::Display for ImplantJob {
 
 impl fmt::Display for ImplantJobInner {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
-        write!(f, "request: {}, args: {})", self.request_type, self.args.join(" "))
+        write!(
+            f,
+            "{} {}",
+            self.request_type.to_string().to_lowercase(),
+            self.args.join(" ")
+        )
     }
 }
 
@@ -124,16 +132,38 @@ impl JobCommand {
                 if let Ok(v) = Self::parse_windows_cmd(str) {
                     return Ok(JobCommand::WindowsCommand(v));
                 }
-                
+
                 Err(TypeError::InvalidJobCommand)
-            },
+            }
         }
     }
 
     fn parse_windows_cmd(str: String) -> Result<WindowsJobCommand, TypeError> {
         match WindowsJobCommand::from_str(&str) {
             Ok(v) => Ok(v),
-            Err(_) => Err(TypeError::InvalidJobCommand)
+            Err(_) => Err(TypeError::InvalidJobCommand),
         }
     }
+}
+
+pub fn match_cmd_description(cmd: JobCommand) -> String {
+    let str = match cmd {
+        JobCommand::Ls => "lists files in current directory",
+        JobCommand::Pwd => "prints current directory",
+        JobCommand::Whoami => "prints the active controlled account",
+        JobCommand::Cd => "changes directory",
+        JobCommand::Mkdir => "creates new directory",
+        JobCommand::Touch => "creates new folder",
+        JobCommand::Dir => "alias for ls",
+        JobCommand::Rm => "removes file / directory",
+        JobCommand::Mv => "moves file / directory",
+        JobCommand::Cp => "copies file / directory",
+        JobCommand::Sysinfo => "lists general information about system",
+
+        JobCommand::WindowsCommand(cmd) => match cmd {
+            WindowsJobCommand::Migrate { id: _ } => "attempts to migrate to specified application",
+        },
+    };
+
+    return str.to_string()
 }

@@ -97,12 +97,14 @@ pub async fn tui(printer: ExternalPrinter<String>) -> Result<(), anyhow::Error> 
 
                     if crate::SELECTED_AGENT.lock().unwrap().is_some() {
                         let cmd = parse_implant_cmd(buffer.clone()).await;
+
                         match cmd {
                             Ok(v) => {
                                 commands::handle_implant_cmd(&v).await;
                             }
+
                             Err(e) if e.kind() == clap::error::ErrorKind::InvalidSubcommand => {
-                                eprintln!("{} Unknown command: use the 'help' command to view possible commands", color_level(log::Level::Warn))
+                                commands::try_handle_implant_unknown(buffer).await;
                             }
                             Err(e) => println!("{}", e),
                         }

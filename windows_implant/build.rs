@@ -44,8 +44,10 @@ fn save_server_cert() -> Result<(), Box<dyn std::error::Error>> {
 
 fn generate_id(rng: &mut ThreadRng) -> Result<u32, Box<dyn std::error::Error>> {
     let id: u32 = rng.gen();
+    let platform = format!("{}/{}", env::var("CARGO_CFG_TARGET_OS").unwrap(), env::var("CARGO_CFG_TARGET_ARCH").unwrap());
 
     let init_data: how_far_types::ImplantInfo = how_far_types::ImplantInfo {
+        platform,
         last_check: None,
         queue: Vec::new(),
     };

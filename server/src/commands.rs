@@ -24,7 +24,7 @@ pub struct Cli {
 #[derive(Subcommand)]
 enum Commands {
     /// Commands for manipulating the database; Alias: db
-    #[command(alias = "db")]
+    #[command(alias = "db", alias = "implants", alias = "agents")]
     Database {
         #[command(subcommand)]
         command: Option<DatabaseCommands>,
@@ -65,7 +65,6 @@ pub async fn parse_implant_cmd(str: String) -> Result<ImplantCli, clap::Error> {
     ImplantCli::try_parse_from(str.split_whitespace())
 }
 
-
 pub async fn handle_cmd(cli: &Cli) {
     match &cli.command {
         Commands::Database { command } => data::handle_database_cmds(command).await,
@@ -74,31 +73,35 @@ pub async fn handle_cmd(cli: &Cli) {
 }
 
 pub async fn handle_implant_cmd(cli: &ImplantCli) {
-    let result = match &cli.command {
-        ImplantCommands::Jobs => todo!(),
+    match &cli.command {
+        ImplantCommands::Jobs => implant::list_jobs().await,
         ImplantCommands::Run { cmd, args } => handle_job_cmd(cmd.to_owned(), args.to_owned()).await,
         ImplantCommands::Cancel { job: _ } => todo!(),
         ImplantCommands::Sleep { secs: _ } => todo!(),
         ImplantCommands::Exit => {
             // removes selected agent, cancelling it
             crate::SELECTED_AGENT.lock().unwrap().take();
-            return ;
-        },
-    };
-
-    match result {
-        Ok(_) => info!("{} Successfully added job to queue", color_level(log::Level::Info)),
-        Err(e) => error!("{} {}", color_level(log::Level::Error), e),
+            return;
+        }
     }
 }
 
-pub async fn handle_job_cmd(cmd: String, args: Vec<String>) -> Result<(), anyhow::Error> {
+pub async fn handle_job_cmd(cmd: String, args: Vec<String>) {
     let cmd = match how_far_types::JobCommand::parse_cmd(cmd) {
         Ok(v) => v,
-        Err(e) => return Err(e.into()),
+        Err(e) => {
+            error!("{} {}", color_level(log::Level::Error), e);
+            return;
+        }
     };
 
-    add_run_job(cmd.to_string(), args).await
+    match add_run_job(cmd.to_string(), args).await {
+        Ok(_) => info!(
+            "{} Successfully added job to queue",
+            color_level(log::Level::Info)
+        ),
+        Err(e) => error!("{} {}", color_level(log::Level::Error), e),
+    }
 }
 
 pub async fn add_run_job(cmd: String, args: Vec<String>) -> Result<(), anyhow::Error> {
@@ -106,7 +109,7 @@ pub async fn add_run_job(cmd: String, args: Vec<String>) -> Result<(), anyhow::E
     let job = ImplantJob {
         issue_time: Utc::now(),
         job: ImplantJobInner {
-            request_type: how_far_types::ImplantJobType::Run(cmd),
+            request_type: how_far_types::ImplantJobType::Run { cmd },
             args,
         },
     };
@@ -131,6 +134,27 @@ pub async fn try_external_command(command: &str, args: SplitWhitespace<'_>) -> b
         }
         Err(e) if e.kind() == tokio::io::ErrorKind::NotFound => false,
         Err(_) => false,
+    }
+}
+
+pub async fn try_handle_implant_unknown(buf: String) {
+    let mut split = buf.split_whitespace();
+    let cmd = split.next().unwrap();
+
+    let cmd = match how_far_types::JobCommand::parse_cmd(cmd.to_string()) {
+        Ok(v) => v,
+        Err(_) => {
+            eprintln!("{} Unknown command: use the 'help' command to view possible commands", color_level(log::Level::Warn));
+            return;
+        }
+    };
+
+    match add_run_job(cmd.to_string(), split.map(|v| v.to_string()).collect()).await {
+        Ok(_) => info!(
+            "{} Successfully added job to queue",
+            color_level(log::Level::Info)
+        ),
+        Err(e) => error!("{} {}", color_level(log::Level::Error), e),
     }
 }
 
