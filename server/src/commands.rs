@@ -74,6 +74,7 @@ pub async fn handle_cmd(cli: &Cli) {
 
 pub async fn handle_implant_cmd(cli: &ImplantCli) {
     match &cli.command {
+        ImplantCommands::Commands => todo!(),
         ImplantCommands::Jobs => implant::list_jobs().await,
         ImplantCommands::Run { cmd, args } => handle_job_cmd(cmd.to_owned(), args.to_owned()).await,
         ImplantCommands::Cancel { job: _ } => todo!(),
@@ -144,7 +145,7 @@ pub async fn try_handle_implant_unknown(buf: String) {
     let cmd = match how_far_types::JobCommand::parse_cmd(cmd.to_string()) {
         Ok(v) => v,
         Err(_) => {
-            eprintln!("{} Unknown command: use the 'help' command to view possible commands", color_level(log::Level::Warn));
+            eprintln!("{} Unknown command: use the 'help' command to view possible commands\n\t\t\t\t\tuse the 'cmds' command to view direct commands for agent", color_level(log::Level::Warn));
             return;
         }
     };

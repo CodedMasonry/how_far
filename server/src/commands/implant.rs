@@ -5,9 +5,12 @@ use crate::database;
 
 #[derive(Subcommand)]
 pub enum ImplantCommands {
+    /// Shows list of available commands
+    #[clap(alias = "cmds")]
+    Commands,
     /// Lists jobs numbered by when added
     Jobs,
-    /// Runs a speciic command in a terminal (fallback if name conflict)
+    /// Runs a command in a terminal (run cmds for list of commands)
     Run { cmd: String, args: Vec<String> },
     /// Cancels a job
     Cancel { job: u32 },
